@@ -12,7 +12,6 @@ import {
   deleteDocumentFromFirestore, 
   saveBatchToFirestore 
 } from "./utils/firebaseDb";
-import { getChapterVerses, getBibleData } from "./utils/bibleService";
 
 // In-memory & JSON file store for registered users synchronized across all connected devices (phones, notebooks)
 const USERS_FILE = path.join(process.cwd(), "data", "users_db.json");
@@ -2743,28 +2742,6 @@ REGRAS DE CONFORMIDADE RIGOROSAS (COFEN/COREN & LGPD):
     } catch (error) {
       console.error("Erro na busca de hinos online:", error);
       return res.status(500).json({ error: "Erro ao buscar hinos online", results: [] });
-    }
-  });
-
-  // --- ROTAS DA BÍBLIA SAGRADA (ALMEIDA) ---
-  app.get("/api/bible/chapter", (req, res) => {
-    try {
-      const book = String(req.query.book || "").trim();
-      const chapter = parseInt(String(req.query.chapter || "1"), 10);
-
-      if (!book || isNaN(chapter) || chapter < 1) {
-        return res.status(400).json({ error: "Livro e capítulo inválidos" });
-      }
-
-      const verses = getChapterVerses(book, chapter);
-      if (verses && verses.length > 0) {
-        return res.json({ book, chapter, verses });
-      }
-
-      return res.status(404).json({ error: "Capítulo não encontrado", book, chapter, verses: [] });
-    } catch (err) {
-      console.error("Erro na rota /api/bible/chapter:", err);
-      return res.status(500).json({ error: "Erro ao carregar versículos" });
     }
   });
 

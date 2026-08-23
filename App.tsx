@@ -31,7 +31,7 @@ import { CommunityView } from './views/CommunityView';
 import ScheduleView from './views/ScheduleView';
 import PastorArea from './views/PastorArea';
 import { HymnsView } from './views/HymnsView';
-import { BibleView } from './views/BibleView';
+import { BibleSearchView } from './views/BibleSearchView';
 
 // COMPONENTES & MODAIS
 import { HeaderNav } from './components/HeaderNav';
@@ -1134,8 +1134,8 @@ export const App: React.FC = () => {
           />
         )}
 
-        {currentView === 'bible' && (
-          <BibleView
+        {currentView === 'bible_search' && (
+          <BibleSearchView
             onBack={() => setCurrentView('home')}
             onShareToMural={(verseText, reference) => {
               const newVerse: BibleVerse = {

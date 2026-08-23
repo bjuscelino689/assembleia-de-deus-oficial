@@ -97,18 +97,56 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
         </div>
       </section>
 
+      {/* DESTAQUE PESQUISA BÍBLICA */}
+      <div 
+        onClick={() => onNavigate('bible_search')}
+        className="bg-gradient-to-r from-purple-700 via-indigo-700 to-amber-600 text-white p-5 rounded-[2.2rem] shadow-lg shadow-purple-500/15 flex items-center justify-between gap-4 cursor-pointer active:scale-[0.98] transition-all"
+      >
+        <div className="flex items-center gap-3.5">
+          <div className="p-3.5 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20">
+            <BookOpen className="text-amber-300 w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest bg-amber-400/25 text-amber-200 px-2 py-0.5 rounded-full border border-amber-300/30">
+                Pesquisa Bíblica
+              </span>
+            </div>
+            <h3 className="font-black text-base text-white mt-0.5">Encontre Versículos da Bíblia</h3>
+            <p className="text-xs text-purple-100/90 font-medium">Digite o livro e versículo (Ex: Isaías 9:6)</p>
+          </div>
+        </div>
+        <div className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl">
+          <ChevronRight size={18} className="text-white" />
+        </div>
+      </div>
+
       {/* BOTÕES DE ACESSO RÁPIDO */}
       <div className="grid grid-cols-2 gap-4">
-        <MenuBtn onClick={() => onNavigate('bible')} icon={<BookOpen />} label="Bíblia Sagrada" color="bg-emerald-600" />
+        <MenuBtn onClick={() => onNavigate('bible_search')} icon={<BookOpen />} label="Pesquisa Bíblica" color="bg-indigo-600" />
         <MenuBtn onClick={() => onNavigate('hymns')} icon={<Music />} label="Harpa Cristã" color="bg-purple-600" />
         <MenuBtn onClick={() => onNavigate('radios')} icon={<Radio />} label="Rádios Gospel" color="bg-amber-500" />
-        <MenuBtn onClick={() => onNavigate('schedule')} icon={<Calendar />} label="Agenda de Cultos" color="bg-blue-600" />
+        <MenuBtn onClick={() => onNavigate('community')} icon={<Sparkles />} label="Mural da Fé" color="bg-emerald-600" />
       </div>
 
       {/* SEÇÃO DE LINKS E RECURSOS DA IGREJA */}
       <section className="space-y-4 pt-2">
         <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 ml-2">Vida na Igreja</h3>
         <div className="space-y-3">
+          <QuickLink 
+            onClick={() => onNavigate('bible_search')} 
+            icon={<BookOpen className="text-indigo-600" />} 
+            title="Pesquisa Bíblica" 
+            desc="Encontre versículos por livro, capítulo e versículo (Ex: Isaías 9:6)" 
+            color="border-l-indigo-600" 
+          />
+          <QuickLink 
+            onClick={() => onNavigate('schedule')} 
+            icon={<Calendar className="text-blue-600" />} 
+            title="Agenda de Cultos" 
+            desc="Horários de cultos da família, doutrina e eventos especiais" 
+            color="border-l-blue-600" 
+          />
           <QuickLink 
             onClick={() => onNavigate('community')} 
             icon={<Sparkles className="text-purple-600" />} 
