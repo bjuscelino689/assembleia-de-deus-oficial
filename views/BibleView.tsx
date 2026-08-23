@@ -137,12 +137,18 @@ export const BibleView: React.FC<BibleViewProps> = ({ onBack, onShareToMural }) 
   const isHorizontalSwipeRef = useRef<boolean | null>(null);
 
   // Carrega Bíblia completa
+  const [isLoadingBibleData, setIsLoadingBibleData] = useState<boolean>(true);
+
   useEffect(() => {
     let mounted = true;
+    setIsLoadingBibleData(true);
     fetchFullBible().then((data) => {
       if (mounted && data && data.length > 0) {
         setBibleData(data);
+        setIsLoadingBibleData(false);
       }
+    }).catch(() => {
+      if (mounted) setIsLoadingBibleData(false);
     });
     return () => {
       mounted = false;

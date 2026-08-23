@@ -12,9 +12,9 @@ let isLoadingBible = false;
 const listeners: Array<(data: RawBibleBook[]) => void> = [];
 
 // IndexedDB Helper para persistência ultra-rápida no celular
-const DB_NAME = 'ad_bible_offline_db';
-const STORE_NAME = 'books_store';
-const DB_VERSION = 1;
+const DB_NAME = 'ad_bible_offline_db_v2';
+const STORE_NAME = 'books_store_v2';
+const DB_VERSION = 2;
 
 function openBibleDB(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
