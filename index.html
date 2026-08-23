@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Assembleia de Deus Nacional - Ministério de Madureira</title>
+    <meta name="description" content="Aplicativo Oficial da Assembleia de Deus Nacional - Ministério de Madureira. Cultos ao vivo, Bíblia Sagrada, Harpa Cristã, Vídeos, Notícias, Pedidos de Oração e Mural da Comunidade.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="theme-color" content="#1E3A8A">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'app-purple': '#7C3AED',
+              'app-bg': '#F8FAFC',
+              'app-green': '#10B981',
+              'app-yellow': '#F59E0B',
+              'app-blue': '#3B82F6',
+              'app-red': '#EF4444',
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              title: ['Montserrat', 'sans-serif'],
+              serif: ['EB Garamond', 'Merriweather', 'Georgia', 'serif'],
+              cinzel: ['Cinzel', 'serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        -webkit-tap-highlight-color: transparent;
+        background-color: #F5F3FF;
+      }
+      .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scaleUp {
+        from { transform: scale(0.94); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      @keyframes pageFlipNext {
+        0% { transform: perspective(1200px) rotateY(0deg); opacity: 1; transform-origin: left center; }
+        50% { opacity: 0.8; }
+        100% { transform: perspective(1200px) rotateY(-85deg); opacity: 0; transform-origin: left center; }
+      }
+      @keyframes pageFlipPrev {
+        0% { transform: perspective(1200px) rotateY(0deg); opacity: 1; transform-origin: right center; }
+        50% { opacity: 0.8; }
+        100% { transform: perspective(1200px) rotateY(85deg); opacity: 0; transform-origin: right center; }
+      }
+      @keyframes pageEnterFromRight {
+        0% { transform: translateX(45px); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes pageEnterFromLeft {
+        0% { transform: translateX(-45px); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+
+      .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+      .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+      .animate-scale-up { animation: scaleUp 0.25s ease-out forwards; }
+      .animate-page-enter-right { animation: pageEnterFromRight 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .animate-page-enter-left { animation: pageEnterFromLeft 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      
+      @keyframes bounceHorizontal {
+        0%, 100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(6px); }
+      }
+      .animate-bounce-horizontal { animation: bounceHorizontal 0.8s ease-in-out infinite; }
+
+      .bible-page-shadow {
+        box-shadow: inset 20px 0 35px -15px rgba(0,0,0,0.07), inset -20px 0 35px -15px rgba(0,0,0,0.07), 0 10px 30px -5px rgba(0,0,0,0.15);
+      }
+      .bible-spine-center {
+        background: linear-gradient(to right, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.02) 20%, rgba(255,255,255,0.4) 50%, rgba(0,0,0,0.02) 80%, rgba(0,0,0,0.14) 100%);
+      }
+      
+      input[type="file"]::file-selector-button {
+        display: none;
+      }
+
+      ::-webkit-scrollbar {
+        width: 0px;
+      }
+    </style>
+</head>
+<body class="text-slate-900 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

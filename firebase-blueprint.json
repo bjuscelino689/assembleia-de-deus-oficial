@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "UserProfile": {
+      "collectionName": "users",
+      "fields": {
+        "id": "string",
+        "name": "string",
+        "email": "string",
+        "phone": "string",
+        "corenNumber": "string",
+        "corenUF": "string",
+        "corenStatus": "string",
+        "accessStatus": "string",
+        "deviceType": "string",
+        "specialty": "string",
+        "hospital": "string",
+        "isAdmin": "boolean",
+        "isBlocked": "boolean"
+      }
+    },
+    "ChatMessage": {
+      "collectionName": "messages",
+      "fields": {
+        "id": "string",
+        "senderId": "string",
+        "senderName": "string",
+        "content": "string",
+        "timestamp": "string"
+      }
+    },
+    "MediaPost": {
+      "collectionName": "media_posts",
+      "fields": {
+        "id": "string",
+        "authorId": "string",
+        "authorName": "string",
+        "title": "string",
+        "url": "string",
+        "type": "string"
+      }
+    },
+    "SystemSetting": {
+      "collectionName": "system_settings",
+      "fields": {
+        "id": "string",
+        "masterPin": "string"
+      }
+    }
+  },
+  "securityRules": [
+    {
+      "collection": "users",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "messages",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "media_posts",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "system_settings",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "shifts",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "patients",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "medications",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "reminders",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "notes",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "checklists",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "documents",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    {
+      "collection": "audit_logs",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    }
+  ]
+}

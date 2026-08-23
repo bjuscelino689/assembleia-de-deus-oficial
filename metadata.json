@@ -1,0 +1,11 @@
+{
+  "name": "Assembleia de Deus Nacional",
+  "description": "Aplicativo Oficial da Assembleia de Deus Nacional - Ministério de Madureira. Cultos ao vivo, Palavra Pastoral, Bíblia Sagrada, Harpa Cristã, Vídeos, Mural & Chat, Pedidos de Oração e Notícias.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
