@@ -193,6 +193,37 @@ try {
   console.error("Erro ao carregar galeria do servidor:", e);
 }
 
+// CARREGA DELEGAÇÃO PASTORAL DO DISCO SE EXISTIR
+const PASTOR_DELEGATION_FILE = path.join(process.cwd(), "data", "pastor_delegation.json");
+let serverPastorDelegation = {
+  pastorAdminId: "",
+  pastorAdminEmail: "",
+  pastorAdminName: "Pr. Juscelino",
+  pastorAccessCode: "1234"
+};
+
+try {
+  if (fs.existsSync(PASTOR_DELEGATION_FILE)) {
+    const data = JSON.parse(fs.readFileSync(PASTOR_DELEGATION_FILE, "utf-8"));
+    if (data && typeof data === 'object') {
+      serverPastorDelegation = { ...serverPastorDelegation, ...data };
+    }
+  }
+} catch (e) {
+  console.error("Erro ao carregar pastor_delegation.json:", e);
+}
+
+function savePastorDelegation() {
+  try {
+    const dir = path.dirname(PASTOR_DELEGATION_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(PASTOR_DELEGATION_FILE, JSON.stringify(serverPastorDelegation, null, 2), "utf-8");
+    saveDocumentToFirestore("system_settings", "pastor_delegation", serverPastorDelegation).catch(() => {});
+  } catch (e) {
+    console.error("Erro ao salvar pastor_delegation.json:", e);
+  }
+}
+
 // PASTA TRIPLA DE MÍDIAS DO MURAL E CHAT (PERSISTÊNCIA ABSOLUTA EM DATA/, PUBLIC/ E BACKUP/)
 const UPLOADS_DIR_DATA = path.join(process.cwd(), "data", "uploads");
 const UPLOADS_DIR_PUBLIC = path.join(process.cwd(), "public", "uploads");
@@ -2294,6 +2325,84 @@ async function startServer() {
     }
 
     return res.json({ success: true, member, members: serverMembers });
+  });
+
+  // --- API ROUTES: PASTOR ADMIN DELEGATION & ACCESS CODE ---
+  app.get("/api/pastor-delegation", (_req, res) => {
+    return res.json({
+      success: true,
+      delegation: serverPastorDelegation
+    });
+  });
+
+  app.post("/api/pastor-delegation", (req, res) => {
+    const { pastorAdminId, pastorAdminEmail, pastorAdminName, pastorAccessCode } = req.body;
+    if (pastorAdminId !== undefined) serverPastorDelegation.pastorAdminId = String(pastorAdminId || '');
+    if (pastorAdminEmail !== undefined) serverPastorDelegation.pastorAdminEmail = String(pastorAdminEmail || '').trim().toLowerCase();
+    if (pastorAdminName !== undefined) serverPastorDelegation.pastorAdminName = String(pastorAdminName || 'Pastor');
+    if (pastorAccessCode !== undefined) serverPastorDelegation.pastorAccessCode = String(pastorAccessCode || '1234').trim();
+
+    savePastorDelegation();
+    console.log(`[Delegação Pastoral Atualizada] Pastor: ${serverPastorDelegation.pastorAdminName} | Código: ${serverPastorDelegation.pastorAccessCode}`);
+    return res.json({ success: true, delegation: serverPastorDelegation });
+  });
+
+  app.post("/api/members/:id/promote-pastor", (req, res) => {
+    const { id } = req.params;
+    const { isPastorAdmin, accessCode } = req.body;
+
+    const targetId = (id || '').trim();
+    const member = serverMembers.find(m => m && (m.id === targetId || m.phone === targetId || m.email === targetId));
+
+    if (!member) {
+      return res.status(404).json({ error: "Membro não encontrado para delegação pastoral." });
+    }
+
+    const shouldPromote = Boolean(isPastorAdmin);
+    member.isPastorAdmin = shouldPromote;
+    if (shouldPromote) {
+      member.role = 'PASTOR';
+      member.accessStatus = 'LIBERADO';
+      member.isBlocked = false;
+      serverPastorDelegation.pastorAdminId = member.id;
+      serverPastorDelegation.pastorAdminEmail = member.email || '';
+      serverPastorDelegation.pastorAdminName = member.name;
+      if (accessCode) {
+        serverPastorDelegation.pastorAccessCode = String(accessCode).trim();
+      }
+    } else {
+      if (member.role === 'PASTOR') member.role = 'Membro';
+      if (serverPastorDelegation.pastorAdminId === member.id) {
+        serverPastorDelegation.pastorAdminId = '';
+        serverPastorDelegation.pastorAdminEmail = '';
+      }
+    }
+
+    // Atualiza também em serverRegisteredUsers
+    const correspondingUser = serverRegisteredUsers.find(u => u && (u.id === member.id || (u.email && u.email === member.email)));
+    if (correspondingUser) {
+      correspondingUser.isPastorAdmin = shouldPromote;
+      if (shouldPromote) {
+        correspondingUser.specialty = 'PASTOR';
+        correspondingUser.accessStatus = 'LIBERADO';
+        correspondingUser.isBlocked = false;
+      }
+    }
+
+    saveServerMembers();
+    saveServerUsers();
+    savePastorDelegation();
+    saveDocumentToFirestore("members", member.id, member).catch(() => {});
+    if (correspondingUser) {
+      saveDocumentToFirestore("users", correspondingUser.id, correspondingUser).catch(() => {});
+    }
+
+    return res.json({
+      success: true,
+      member,
+      delegation: serverPastorDelegation,
+      members: serverMembers
+    });
   });
 
   app.delete("/api/members/:id", (req, res) => {

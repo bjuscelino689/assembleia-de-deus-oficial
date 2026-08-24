@@ -22,6 +22,10 @@ export interface ChurchInfo {
   photoUrl?: string;
   address?: string;
   phone?: string;
+  pastorAdminEmail?: string;
+  pastorAdminId?: string;
+  pastorAdminName?: string;
+  pastorAccessCode?: string;
 }
 
 export interface Member {
@@ -39,6 +43,8 @@ export interface Member {
   deviceType?: 'NOTEBOOK' | 'CELULAR' | 'DESKTOP' | string;
   lastActiveAt?: number;
   isOnline?: boolean;
+  isPastorAdmin?: boolean;
+  pastorAccessCode?: string;
 }
 
 export interface PastoralVisit {
@@ -295,6 +301,8 @@ export interface UserProfile {
   adminMessage?: string;
   adminMessageRead?: boolean;
   adminMessageSentAt?: string;
+  isPastorAdmin?: boolean;
+  pastorAccessCode?: string;
 }
 
 export interface ShiftItem {

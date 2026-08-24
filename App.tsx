@@ -714,8 +714,10 @@ export const App: React.FC = () => {
 
   const handlePastorLogin = (pass: string): boolean => {
     const clean = (pass || '').trim();
+    const customCode = (churchInfo?.pastorAccessCode || '').trim();
     if (
       clean === pastorPassword || 
+      (customCode && clean === customCode) ||
       clean === '1234' || 
       clean === '123' || 
       clean === 'admin' ||

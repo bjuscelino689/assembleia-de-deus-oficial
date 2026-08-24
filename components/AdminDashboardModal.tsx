@@ -3,7 +3,7 @@ import { AuditLog, UserProfile, PRIMARY_ADMIN_EMAIL } from '../types';
 import { 
   ShieldCheck, Lock, Users, Activity, FileText, Server, AlertTriangle, Key, X, 
   Bell, RefreshCw, Database, Download, CheckCircle2, UserX, Search, Smartphone, 
-  Laptop, Check, Ban, Clock, Trash2, ShieldAlert, MessageSquare, Send, MessageCircle
+  Laptop, Check, Ban, Clock, Trash2, ShieldAlert, MessageSquare, Send, MessageCircle, Crown
 } from 'lucide-react';
 
 interface AdminDashboardModalProps {
@@ -98,6 +98,22 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const handleOpenMessageModal = (targetUser: UserProfile) => {
     setSelectedUserForMessage(targetUser);
     setAdminMessageInput(targetUser.adminMessage || '');
+  };
+
+  const handlePromoteToPastor = async (targetUser: UserProfile) => {
+    try {
+      const res = await fetch(`/api/members/${targetUser.id}/promote-pastor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPastorAdmin: !targetUser.isPastorAdmin, accessCode: '1234' })
+      });
+      if (res.ok) {
+        alert(`${targetUser.name} ${targetUser.isPastorAdmin ? 'não é mais' : 'agora é'} o Pastor Administrativo da igreja!`);
+        refreshUsers();
+      }
+    } catch (e) {
+      alert('Erro ao atualizar cargo pastoral.');
+    }
   };
 
   const handleSaveAdminMsg = async (msgText: string) => {
@@ -621,6 +637,26 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
+                            {u.isPastorAdmin ? (
+                              <button
+                                onClick={() => handlePromoteToPastor(u)}
+                                className="px-2.5 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-rose-500/20 hover:text-rose-300 font-black rounded-xl text-[10px] uppercase transition-all shrink-0 flex items-center gap-1"
+                                title="Revogar cargo de Pastor Administrativo"
+                              >
+                                <Crown size={12} className="text-amber-400" />
+                                <span>Pastor Designado (Remover)</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePromoteToPastor(u)}
+                                className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-black rounded-xl text-[10px] uppercase transition-all shrink-0 flex items-center gap-1 border border-amber-500/20"
+                                title="Nomear este usuário como Pastor Administrativo"
+                              >
+                                <Crown size={12} />
+                                <span>Tornar Pastor</span>
+                              </button>
+                            )}
+
                             <button
                               onClick={() => handleOpenMessageModal(u)}
                               className={`px-2.5 py-1.5 rounded-xl font-black text-[10px] uppercase transition-all shrink-0 flex items-center gap-1 ${
