@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChurchInfo, Member, PastoralVisit, Cult, Meeting, Festival, PrayerCampaign } from '../types';
+import { ChurchInfo, Member, PastoralVisit, Cult, Meeting, Festival, PrayerCampaign, UserProfile, PRIMARY_ADMIN_EMAIL, isMasterAdminEmail } from '../types';
 import { 
   Lock, Save, User, ChevronLeft, Eye, EyeOff, ShieldCheck, KeyRound, 
   Users, UserCheck, UserX, Plus, Search, Trash2, Calendar, Clock, 
@@ -24,6 +24,7 @@ interface PastorAreaProps {
   currentPassword: string;
   setPastorPassword: (pass: string) => void;
   onNavigate: (view: string) => void;
+  user?: UserProfile;
   
   // Membros
   members: Member[];
@@ -62,6 +63,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   currentPassword,
   setPastorPassword,
   onNavigate,
+  user,
   members,
   setMembers,
   pastoralVisits = [],
@@ -77,6 +79,13 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   currentMemberId = null,
   setCurrentMemberId = () => {}
 }) => {
+  const isMasterAdmin = Boolean(
+    (user && isMasterAdminEmail(user.email)) || 
+    (typeof window !== 'undefined' && (
+      (localStorage.getItem('nursecare_logged_user_email') || '').toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase() ||
+      (localStorage.getItem('nursecare_user_session_email') || '').toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()
+    ))
+  );
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [activeTab, setActiveTab] = useState<'membros' | 'agendamentos' | 'config'>('membros');
@@ -518,6 +527,10 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   };
 
   const handleToggleBlock = async (member: Member) => {
+    if (!isMasterAdmin) {
+      alert('Acesso Restrito: Apenas o Administrador Geral (bjuscelino33@gmail.com) tem permissão para bloquear ou desbloquear membros.');
+      return;
+    }
     if (member.isBlocked) {
       // Desbloquear
       const updatedMember: Member = { 
@@ -553,6 +566,10 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   };
 
   const confirmBlock = async () => {
+    if (!isMasterAdmin) {
+      alert('Acesso Restrito: Apenas o Administrador Geral (bjuscelino33@gmail.com) tem permissão para bloquear membros.');
+      return;
+    }
     if (!blockingMember) return;
     const reason = blockReason.trim() || 'Acesso suspenso pelo sistema administrativo';
     const updatedMember: Member = { 
@@ -587,6 +604,10 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   };
 
   const handleApproveMember = async (member: Member) => {
+    if (!isMasterAdmin) {
+      alert('Acesso Restrito: Apenas o Administrador Geral (bjuscelino33@gmail.com) tem permissão para liberar ou desbloquear membros.');
+      return;
+    }
     const updatedMember: Member = { 
       ...member, 
       isBlocked: false, 
@@ -1001,29 +1022,39 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                               <MessageCircle size={16} />
                             </a>
                           )}
-                          <button
-                            onClick={() => handleToggleBlock(member)}
-                            className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition-all border border-amber-200"
-                            title="Bloquear Acesso"
-                          >
-                            <UserX size={16} />
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => setItemToDelete({ type: 'member', id: member.id, title: member.name })}
-                            className="px-3 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-[10px] sm:text-xs uppercase tracking-wider shadow-md shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0"
-                            title="Excluir conta definitivamente do sistema"
-                          >
-                            <Trash2 size={15} />
-                            <span>Excluir Definitivamente</span>
-                          </button>
-                          <button
-                            onClick={() => handleApproveMember(member)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
-                          >
-                            <CheckCircle2 size={16} />
-                            <span>Liberar Acesso</span>
-                          </button>
+
+                          {isMasterAdmin ? (
+                            <>
+                              <button
+                                onClick={() => handleToggleBlock(member)}
+                                className="p-2.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl transition-all border border-amber-200"
+                                title="Bloquear Acesso"
+                              >
+                                <UserX size={16} />
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => setItemToDelete({ type: 'member', id: member.id, title: member.name })}
+                                className="px-3 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-[10px] sm:text-xs uppercase tracking-wider shadow-md shadow-rose-600/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0"
+                                title="Excluir conta definitivamente do sistema"
+                              >
+                                <Trash2 size={15} />
+                                <span>Excluir Definitivamente</span>
+                              </button>
+                              <button
+                                onClick={() => handleApproveMember(member)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                              >
+                                <CheckCircle2 size={16} />
+                                <span>Liberar Acesso</span>
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-[10px] font-bold text-slate-500">
+                              <Lock size={12} className="text-amber-600" />
+                              <span>Bloqueio/Liberação restrito à Administração Geral</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1274,8 +1305,8 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 flex-wrap">
-                        {/* Botão Liberar Acesso rápido se pendente */}
-                        {member.accessStatus === 'PENDENTE_LIBERACAO' && !member.isBlocked && (
+                        {/* Botão Liberar Acesso rápido se pendente (exclusivo Administrador Master) */}
+                        {isMasterAdmin && member.accessStatus === 'PENDENTE_LIBERACAO' && !member.isBlocked && (
                           <button 
                             onClick={() => handleApproveMember(member)}
                             className="px-3.5 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 active:scale-95 transition-all"
@@ -1304,7 +1335,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                             <ShieldCheck size={14} className="text-purple-400" />
                             <span>Pastor Master (Oficial)</span>
                           </span>
-                        ) : (
+                        ) : isMasterAdmin ? (
                           <>
                             {/* Botão Alternar Bloqueio */}
                             <button 
@@ -1326,6 +1357,11 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                               <span>Excluir</span>
                             </button>
                           </>
+                        ) : (
+                          <span className="px-2.5 py-1.5 bg-slate-800/80 border border-slate-700 text-slate-400 text-[10px] font-bold rounded-xl flex items-center gap-1">
+                            <Lock size={12} className="text-amber-500" />
+                            <span>Controle de Bloqueio Restrito</span>
+                          </span>
                         )}
                       </div>
                     </div>

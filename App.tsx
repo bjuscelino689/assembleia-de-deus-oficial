@@ -1204,6 +1204,21 @@ export const App: React.FC = () => {
               setPastorPassword(pass);
               localStorage.setItem('ad_pastor_pin', pass);
             }}
+            user={user}
+            members={members}
+            setMembers={setMembers}
+            pastoralVisits={pastoralVisits}
+            setPastoralVisits={setPastoralVisits}
+            cults={cults}
+            setCults={setCults}
+            meetings={meetings}
+            setMeetings={setMeetings}
+            festivals={festivals}
+            setFestivals={setFestivals}
+            campaigns={campaigns}
+            setCampaigns={setCampaigns}
+            currentMemberId={currentMemberId}
+            setCurrentMemberId={setCurrentMemberId}
             onNavigate={(view) => {
               if (view === 'members') setCurrentView('pastor');
               else setCurrentView(view);
