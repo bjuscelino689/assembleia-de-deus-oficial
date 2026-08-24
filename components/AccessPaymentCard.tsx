@@ -18,11 +18,11 @@ const DEFAULT_PAYMENT_INFO: PaymentAccessInfo = {
   title: 'Pagamento do meu acesso',
   qrCodeUrl: '',
   pixKey: '',
-  recipientName: 'Assembleia de Deus Nacional - Ministério de Madureira',
+  recipientName: 'Setor Financeiro / Administrativo',
   amount: '',
   description: 'Mantenha sua contribuição e acesso ao aplicativo em dia. O vencimento ocorre todo dia 28 de cada mês.',
   updatedAt: Date.now(),
-  updatedBy: 'Setor Administrativo'
+  updatedBy: 'Setor Financeiro / Administrativo'
 };
 
 export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, churchInfo, onOpenAuth }) => {
@@ -171,22 +171,22 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
 
   // Abrir WhatsApp para enviar comprovante
   const handleSendWhatsAppReceipt = () => {
-    const churchPhone = churchInfo?.phone || '(11) 99876-5432';
-    const cleanPhone = churchPhone.replace(/\D/g, '');
-    const memberName = user?.name && user.name !== 'Visitante' ? user.name : 'Membro da Igreja';
+    const phone = churchInfo?.phone || '(11) 99876-5432';
+    const cleanPhone = phone.replace(/\D/g, '');
+    const memberName = user?.name && user.name !== 'Visitante' ? user.name : 'Usuário do Aplicativo';
 
-    const text = `🙏 *Paz do Senhor, Pastor!*\n\nEstou enviando o meu comprovante de *Pagamento do meu acesso* ao aplicativo da Assembleia de Deus (Vencimento todo dia 28).\n\n👤 *Nome:* ${memberName}\n📅 *Referência:* Vencimento Dia 28\n\nQue Deus abençoe grandemente o ministério!`;
+    const text = `📄 *Comprovante de Pagamento*\n\nOlá, estou enviando o comprovante referente ao *Pagamento do meu acesso* (Vencimento todo dia 28).\n\n👤 *Nome:* ${memberName}\n📅 *Referência:* Vencimento Dia 28\n\nFavor confirmar o recebimento e liberação do acesso. Obrigado!`;
     
     const url = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
-  // Iniciar edição pelo pastor
+  // Iniciar edição pelo administrador / financeiro
   const handleStartEdit = () => {
     setEditForm({
       qrCodeUrl: paymentInfo.qrCodeUrl || '',
       pixKey: paymentInfo.pixKey || '',
-      recipientName: paymentInfo.recipientName || 'Assembleia de Deus Nacional - Ministério de Madureira',
+      recipientName: paymentInfo.recipientName || 'Setor Financeiro / Administrativo',
       amount: paymentInfo.amount || '',
       description: paymentInfo.description || 'Mantenha sua contribuição e acesso ao aplicativo em dia. O vencimento ocorre todo dia 28 de cada mês.'
     });
@@ -389,7 +389,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
                   </button>
                   <a
                     href={paymentInfo.qrCodeUrl}
-                    download="qrcode-pagamento-acesso-igreja.png"
+                    download="qrcode-pagamento-acesso.png"
                     className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                   >
                     <Download size={13} className="text-amber-400" />
@@ -404,10 +404,10 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
               {/* FAVORECIDO & VALOR */}
               <div className="bg-white/10 p-3.5 rounded-2xl border border-white/10 space-y-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 block">
-                  Dados do Favorecido
+                  Identificação do Favorecido
                 </span>
                 <p className="text-sm font-black text-white">
-                  {paymentInfo.recipientName || 'Assembleia de Deus Nacional'}
+                  {paymentInfo.recipientName || 'Setor Financeiro / Administrativo'}
                 </p>
                 <div className="flex items-center justify-between text-xs text-indigo-200 font-medium pt-0.5">
                   <span>Vencimento Mensal:</span>
@@ -417,7 +417,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
                 </div>
                 {paymentInfo.amount && (
                   <div className="flex items-center justify-between text-xs text-indigo-200 font-medium pt-0.5">
-                    <span>Valor Sugerido / Mensalidade:</span>
+                    <span>Valor do Acesso:</span>
                     <span className="font-black text-emerald-300 text-sm">
                       {paymentInfo.amount}
                     </span>
@@ -644,13 +644,13 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
               {/* NOME DO FAVORECIDO */}
               <div>
                 <label className="block text-slate-700 dark:text-zinc-300 mb-1 uppercase tracking-wider text-[11px]">
-                  3. Nome do Favorecido / Igreja
+                  3. Identificação do Favorecido / Setor
                 </label>
                 <input 
                   type="text"
                   value={editForm.recipientName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, recipientName: e.target.value }))}
-                  placeholder="Ex: Assembleia de Deus Nacional - Pr. Juscelino"
+                  placeholder="Ex: Setor Financeiro / Setor Administrativo"
                   className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl text-xs font-normal focus:ring-2 focus:ring-purple-500 outline-none"
                 />
               </div>
@@ -672,13 +672,13 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
               {/* DESCRIÇÃO / INSTRUÇÕES */}
               <div>
                 <label className="block text-slate-700 dark:text-zinc-300 mb-1 uppercase tracking-wider text-[11px]">
-                  5. Mensagem de Orientação aos Membros
+                  5. Mensagem de Orientação aos Usuários
                 </label>
                 <textarea 
                   rows={2}
                   value={editForm.description}
                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Instruções para os membros..."
+                  placeholder="Instruções para os usuários efetuarem o pagamento..."
                   className="w-full p-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-2xl text-xs font-normal focus:ring-2 focus:ring-purple-500 outline-none resize-none"
                 />
               </div>

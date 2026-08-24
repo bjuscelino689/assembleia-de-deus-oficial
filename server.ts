@@ -41,11 +41,11 @@ let serverPaymentAccessInfo = {
   title: "Pagamento do meu acesso",
   qrCodeUrl: "",
   pixKey: "",
-  recipientName: "Assembleia de Deus Nacional - Ministério de Madureira",
+  recipientName: "Setor Financeiro / Administrativo",
   amount: "",
   description: "Contribuição mensal de manutenção do acesso com vencimento todo dia 28.",
   updatedAt: Date.now(),
-  updatedBy: "Setor Administrativo"
+  updatedBy: "Setor Financeiro / Administrativo"
 };
 let serverMasterAdminPin = "123456"; // PIN de 6 dígitos Padrão do Administrador Master
 const deletedUserIdentifiers = new Set<string>();
