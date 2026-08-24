@@ -22,7 +22,7 @@ const DEFAULT_PAYMENT_INFO: PaymentAccessInfo = {
   amount: '',
   description: 'Mantenha sua contribuição e acesso ao aplicativo em dia. O vencimento ocorre todo dia 28 de cada mês.',
   updatedAt: Date.now(),
-  updatedBy: 'Pastor Presidente'
+  updatedBy: 'Setor Administrativo'
 };
 
 export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, churchInfo, onOpenAuth }) => {
@@ -300,13 +300,13 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* BOTÃO EXCLUSIVO DO PASTOR / ADMIN */}
+            {/* BOTÃO EXCLUSIVO DO SETOR ADMINISTRATIVO / ADMIN */}
             {canEdit && (
               <button
                 type="button"
                 onClick={handleStartEdit}
                 className="px-3 py-2 bg-white/10 hover:bg-white/20 text-amber-300 hover:text-amber-200 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border border-amber-300/30 cursor-pointer active:scale-95 shrink-0"
-                title="Configurar QR Code (Apenas Pastor/Admin)"
+                title="Configurar QR Code (Setor Administrativo)"
               >
                 <Edit3 size={14} />
                 <span className="hidden sm:inline">Gerenciar QR Code</span>
@@ -361,7 +361,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
                     <p className="text-[11px] font-bold text-slate-600 leading-tight">
                       {canEdit 
                         ? 'Nenhum QR Code configurado. Clique em "Gerenciar" para adicionar.' 
-                        : 'O Pastor adicionará o QR Code Pix em breve.'}
+                        : 'O setor administrativo adicionará o QR Code Pix em breve.'}
                     </p>
                     {canEdit && (
                       <button
@@ -537,7 +537,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
         </div>
       )}
 
-      {/* MODAL DE GERENCIAMENTO / UPLOAD EXCLUSIVO DO PASTOR */}
+      {/* MODAL DE GERENCIAMENTO / UPLOAD EXCLUSIVO DO SETOR ADMINISTRATIVO */}
       {isEditing && canEdit && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white dark:bg-zinc-900 max-w-lg w-full p-6 rounded-[2.5rem] shadow-2xl space-y-5 my-8 border border-slate-200 dark:border-zinc-800 text-slate-900 dark:text-white">
@@ -550,7 +550,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
                 <div>
                   <h3 className="font-black text-base">Gerenciar QR Code de Pagamento</h3>
                   <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                    Área Exclusiva do Pastor • Vencimento Dia 28
+                    Área do Setor Administrativo • Vencimento Dia 28
                   </span>
                 </div>
               </div>

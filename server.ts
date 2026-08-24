@@ -45,7 +45,7 @@ let serverPaymentAccessInfo = {
   amount: "",
   description: "Contribuição mensal de manutenção do acesso com vencimento todo dia 28.",
   updatedAt: Date.now(),
-  updatedBy: "Pastor Presidente"
+  updatedBy: "Setor Administrativo"
 };
 let serverMasterAdminPin = "123456"; // PIN de 6 dígitos Padrão do Administrador Master
 const deletedUserIdentifiers = new Set<string>();
