@@ -59,14 +59,16 @@ class ErrorBoundary extends Component<Props, State> {
               <button
                 onClick={() => {
                   try {
+                    localStorage.removeItem('ad_members');
+                    localStorage.removeItem('ad_user');
                     localStorage.removeItem('ad_chat_messages');
                   } catch (e) {}
                   this.setState({ hasError: false, error: null });
-                  window.location.reload();
+                  window.location.href = window.location.origin;
                 }}
                 className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl text-xs transition-all active:scale-95 cursor-pointer"
               >
-                🧹 Limpar Cache Local e Reiniciar
+                🧹 Limpar Cache Local e Restaurar Início
               </button>
             </div>
           </div>

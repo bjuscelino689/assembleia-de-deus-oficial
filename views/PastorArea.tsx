@@ -19,16 +19,16 @@ import {
 interface PastorAreaProps {
   isAuthenticated: boolean;
   onLogin: (pass: string) => boolean;
-  churchInfo: ChurchInfo;
-  setChurchInfo: (info: ChurchInfo) => void;
-  currentPassword: string;
-  setPastorPassword: (pass: string) => void;
-  onNavigate: (view: string) => void;
+  churchInfo?: ChurchInfo;
+  setChurchInfo?: (info: ChurchInfo) => void;
+  currentPassword?: string;
+  setPastorPassword?: (pass: string) => void;
+  onNavigate?: (view: string) => void;
   user?: UserProfile;
   
   // Membros
-  members: Member[];
-  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+  members?: Member[];
+  setMembers?: React.Dispatch<React.SetStateAction<Member[]>>;
   
   // Visitas Pastorais
   pastoralVisits?: PastoralVisit[];
@@ -56,16 +56,16 @@ interface PastorAreaProps {
 }
 
 const PastorArea: React.FC<PastorAreaProps> = ({ 
-  isAuthenticated, 
-  onLogin, 
-  churchInfo, 
-  setChurchInfo, 
-  currentPassword,
-  setPastorPassword,
-  onNavigate,
+  isAuthenticated = false, 
+  onLogin = () => false, 
+  churchInfo = { name: "Assembleia de Deus Nacional", pastorName: "Pr. Juscelino", address: "Templo Sede", phone: "(11) 99876-5432" }, 
+  setChurchInfo = () => {}, 
+  currentPassword = '1234',
+  setPastorPassword = () => {},
+  onNavigate = () => {},
   user,
-  members,
-  setMembers,
+  members = [],
+  setMembers = () => {},
   pastoralVisits = [],
   setPastoralVisits = () => {},
   cults = [],
@@ -77,14 +77,22 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   campaigns = [],
   setCampaigns = () => {},
   currentMemberId = null,
-  setCurrentMemberId = () => {}
+  setCurrentMemberId = () => {},
+  onBack
 }) => {
   const isMasterAdmin = Boolean(
     (user && isMasterAdminEmail(user.email)) || 
-    (typeof window !== 'undefined' && (
-      (localStorage.getItem('nursecare_logged_user_email') || '').toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase() ||
-      (localStorage.getItem('nursecare_user_session_email') || '').toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()
-    ))
+    (() => {
+      try {
+        if (typeof window === 'undefined') return false;
+        const e1 = (localStorage.getItem('nursecare_logged_user_email') || '').toLowerCase();
+        const e2 = (localStorage.getItem('nursecare_user_session_email') || '').toLowerCase();
+        const e3 = (localStorage.getItem('ad_user_email') || '').toLowerCase();
+        return e1 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e2 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e3 === PRIMARY_ADMIN_EMAIL.toLowerCase();
+      } catch (e) {
+        return false;
+      }
+    })()
   );
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -128,7 +136,10 @@ const PastorArea: React.FC<PastorAreaProps> = ({
     try {
       setIsSyncingMembers(true);
       // 1. Busca da Nuvem Firestore
-      const firestoreMembers = await fetchCollectionFromFirestore<Member>('members');
+      let firestoreMembers: Member[] = [];
+      try {
+        firestoreMembers = await fetchCollectionFromFirestore<Member>('members');
+      } catch (e) {}
       
       // 2. Busca do Servidor de Membros
       let serverList: Member[] = [];
@@ -145,6 +156,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
       } catch (e) {}
 
       setMembers(prev => {
+        const safePrev = Array.isArray(prev) ? prev : [];
         const map = new Map<string, Member>();
         
         // Membros do Firestore (ignora deletados)
@@ -172,7 +184,6 @@ const PastorArea: React.FC<PastorAreaProps> = ({
             if (!u || !u.id || !u.name) return;
             const uId = String(u.id).toLowerCase().trim();
             const uEmail = (u.email || '').toLowerCase().trim();
-            
             const uName = (u.name || '').toLowerCase().trim();
             
             // Nunca duplica a conta do Pastor / Admin Master
@@ -217,7 +228,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
         }
 
         // Mantém os que foram criados localmente (e não foram deletados)
-        prev.forEach(m => { 
+        safePrev.forEach(m => { 
           if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
             map.set(m.id, m); 
           }
@@ -241,33 +252,37 @@ const PastorArea: React.FC<PastorAreaProps> = ({
       syncMembersFromServer();
       
       // Assinatura em tempo real no Firestore
-      const unsubscribe = subscribeToCollection<Member>('members', (remoteList) => {
-        if (Array.isArray(remoteList) && remoteList.length > 0) {
-          setMembers(prev => {
-            const map = new Map<string, Member>();
-            remoteList.forEach(m => { 
-              if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
-                map.set(m.id, m); 
-              }
+      let unsubscribe = () => {};
+      try {
+        unsubscribe = subscribeToCollection<Member>('members', (remoteList) => {
+          if (Array.isArray(remoteList) && remoteList.length > 0) {
+            setMembers(prev => {
+              const safePrev = Array.isArray(prev) ? prev : [];
+              const map = new Map<string, Member>();
+              remoteList.forEach(m => { 
+                if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+                  map.set(m.id, m); 
+                }
+              });
+              safePrev.forEach(m => { 
+                if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+                  map.set(m.id, m); 
+                }
+              });
+              const merged = deduplicateMembersList(Array.from(map.values()));
+              try {
+                localStorage.setItem('ad_members', JSON.stringify(merged));
+              } catch (e) {}
+              return merged;
             });
-            prev.forEach(m => { 
-              if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
-                map.set(m.id, m); 
-              }
-            });
-            const merged = deduplicateMembersList(Array.from(map.values()));
-            try {
-              localStorage.setItem('ad_members', JSON.stringify(merged));
-            } catch (e) {}
-            return merged;
-          });
-        }
-      });
+          }
+        });
+      } catch (e) {}
 
       const interval = setInterval(syncMembersFromServer, 3000);
       return () => {
         clearInterval(interval);
-        unsubscribe();
+        try { unsubscribe(); } catch (e) {}
       };
     }
   }, [isAuthenticated]);
@@ -471,16 +486,21 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   const [schedDesc, setSchedDesc] = useState('');
 
   // Estado para Configurações
-  const [editName, setEditName] = useState(churchInfo.pastorName || '');
-  const [editPhotoUrl, setEditPhotoUrl] = useState(churchInfo.photoUrl || '');
+  const [editName, setEditName] = useState(churchInfo?.pastorName || 'Pr. Juscelino');
+  const [editPhotoUrl, setEditPhotoUrl] = useState(churchInfo?.photoUrl || '');
   const [newPass, setNewPass] = useState('');
   const [isChangingPass, setIsChangingPass] = useState(false);
   const churchFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLoginClick = () => {
-    const success = onLogin(pass);
+    const entered = pass.trim();
+    if (!entered) {
+      alert('Por favor, digite a senha de acesso.');
+      return;
+    }
+    const success = onLogin(entered);
     if (!success) {
-      alert('Senha incorreta! Tente novamente.');
+      alert('Senha incorreta! A senha padrão é 123 ou 1234.');
       setPass('');
     }
   };
@@ -815,14 +835,46 @@ const PastorArea: React.FC<PastorAreaProps> = ({
 
           <button 
             onClick={handleLoginClick} 
-            className="w-full bg-app-purple text-white font-black p-5 rounded-[2rem] shadow-xl shadow-app-purple/20 uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 text-sm"
+            className="w-full bg-app-purple text-white font-black p-5 rounded-[2rem] shadow-xl shadow-app-purple/20 uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-3 text-sm hover:bg-purple-700"
           >
             <ShieldCheck size={20} />
             Acessar Painel Exclusivo
           </button>
-          
-          <div className="p-4 bg-slate-100/80 rounded-2xl border border-slate-200 text-[11px] font-bold text-slate-500 leading-relaxed">
-            🔑 Senha padrão inicial: <span className="font-black text-app-purple">123</span> (você pode alterar a qualquer momento no painel).
+
+          {isMasterAdmin && (
+            <button 
+              type="button"
+              onClick={() => onLogin('1234')} 
+              className="w-full bg-gradient-to-r from-amber-500 to-purple-600 text-white font-black p-3.5 rounded-2xl shadow-md uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 text-xs"
+            >
+              <ShieldCheck size={16} className="text-amber-200" />
+              Entrar como Administrador Master (Direto)
+            </button>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <div className="p-3.5 bg-slate-100/90 rounded-2xl border border-slate-200 text-[11px] font-bold text-slate-600 leading-relaxed flex items-center justify-between gap-2">
+              <span>🔑 Senha padrão: <strong className="text-purple-700 font-black">123</strong> ou <strong className="text-purple-700 font-black">1234</strong></span>
+              <button 
+                type="button" 
+                onClick={() => { setPass('123'); onLogin('123'); }}
+                className="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg text-[10px] font-black uppercase transition-colors shrink-0"
+              >
+                Preencher 123
+              </button>
+            </div>
+
+            <button 
+              type="button"
+              onClick={() => {
+                if (onBack) onBack();
+                else onNavigate('home');
+              }}
+              className="w-full py-3 text-slate-500 hover:text-slate-800 font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
+            >
+              <ChevronLeft size={16} />
+              Voltar ao Início
+            </button>
           </div>
         </div>
       </div>
