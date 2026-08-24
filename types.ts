@@ -470,3 +470,15 @@ export interface HospitalInfo {
   totalBeds: number;
   activeUnits: string[];
 }
+
+export interface PaymentAccessInfo {
+  dueDay: number;
+  title: string;
+  qrCodeUrl?: string;
+  pixKey?: string;
+  recipientName?: string;
+  amount?: string;
+  description?: string;
+  updatedAt?: number;
+  updatedBy?: string;
+}

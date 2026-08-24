@@ -20,6 +20,7 @@ const MESSAGES_FILE = path.join(process.cwd(), "data", "messages_db.json");
 const MEDIA_POSTS_FILE = path.join(process.cwd(), "data", "media_posts_db.json");
 const VIDEOS_FILE = path.join(process.cwd(), "data", "videos_db.json");
 const GALLERY_FILE = path.join(process.cwd(), "data", "gallery_db.json");
+const PAYMENT_ACCESS_FILE = path.join(process.cwd(), "data", "payment_access_db.json");
 const UPLOADS_STORE_FILE = path.join(process.cwd(), "data", "uploads_store.json");
 const DELETED_IDS_FILE = path.join(process.cwd(), "data", "deleted_ids.json");
 
@@ -35,6 +36,17 @@ const INITIAL_SERVER_MEDIA_POSTS: any[] = [];
 let serverMediaPosts: any[] = [];
 let serverVideos: any[] = [];
 let serverGallery: any[] = [];
+let serverPaymentAccessInfo = {
+  dueDay: 28,
+  title: "Pagamento do meu acesso",
+  qrCodeUrl: "",
+  pixKey: "",
+  recipientName: "Assembleia de Deus Nacional - Ministério de Madureira",
+  amount: "",
+  description: "Contribuição mensal de manutenção do acesso com vencimento todo dia 28.",
+  updatedAt: Date.now(),
+  updatedBy: "Pastor Presidente"
+};
 let serverMasterAdminPin = "123456"; // PIN de 6 dígitos Padrão do Administrador Master
 const deletedUserIdentifiers = new Set<string>();
 const deletedMessageIds = new Set<string>();
@@ -43,6 +55,31 @@ const deletedVideoIds = new Set<string>();
 const deletedGalleryIds = new Set<string>();
 
 const uploadsBase64Store: Record<string, string> = {};
+
+// CARREGA INFORMAÇÕES DE PAGAMENTO DO ACESSO
+try {
+  if (fs.existsSync(PAYMENT_ACCESS_FILE)) {
+    const data = JSON.parse(fs.readFileSync(PAYMENT_ACCESS_FILE, "utf-8"));
+    if (data && typeof data === 'object') {
+      serverPaymentAccessInfo = { ...serverPaymentAccessInfo, ...data };
+    }
+  }
+} catch (e) {
+  console.error("Erro ao carregar payment_access_db.json:", e);
+}
+
+function savePaymentAccessInfo() {
+  try {
+    const dir = path.dirname(PAYMENT_ACCESS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(PAYMENT_ACCESS_FILE, JSON.stringify(serverPaymentAccessInfo, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Erro ao salvar payment_access_db.json:", e);
+  }
+  try {
+    saveDocumentToFirestore("system_settings", "payment_access", serverPaymentAccessInfo).catch(() => {});
+  } catch (e) {}
+}
 
 // CARREGA BASE64 STORE PERMANENTE
 try {
@@ -2742,6 +2779,47 @@ REGRAS DE CONFORMIDADE RIGOROSAS (COFEN/COREN & LGPD):
     } catch (error) {
       console.error("Erro na busca de hinos online:", error);
       return res.status(500).json({ error: "Erro ao buscar hinos online", results: [] });
+    }
+  });
+
+  // --- PAYMENT ACCESS & QR CODE ROUTES ---
+  app.get("/api/payment-access", async (_req, res) => {
+    try {
+      // Tenta buscar no Firestore caso tenha sido atualizado externamente
+      try {
+        const firestoreData = await loadDocumentFromFirestore("system_settings", "payment_access");
+        if (firestoreData && typeof firestoreData === 'object' && firestoreData.updatedAt && firestoreData.updatedAt > (serverPaymentAccessInfo.updatedAt || 0)) {
+          serverPaymentAccessInfo = { ...serverPaymentAccessInfo, ...firestoreData };
+        }
+      } catch (fErr) {}
+      res.json({ success: true, paymentInfo: serverPaymentAccessInfo });
+    } catch (e: any) {
+      res.json({ success: true, paymentInfo: serverPaymentAccessInfo });
+    }
+  });
+
+  app.post("/api/payment-access", (req, res) => {
+    try {
+      const updates = req.body;
+      if (!updates || typeof updates !== 'object') {
+        return res.status(400).json({ success: false, error: "Dados inválidos" });
+      }
+
+      serverPaymentAccessInfo = {
+        ...serverPaymentAccessInfo,
+        ...updates,
+        dueDay: 28, // Fixado no dia 28 conforme solicitado
+        title: updates.title || "Pagamento do meu acesso",
+        updatedAt: Date.now()
+      };
+
+      savePaymentAccessInfo();
+
+      console.log("Informações de pagamento do acesso atualizadas com sucesso");
+      res.json({ success: true, paymentInfo: serverPaymentAccessInfo });
+    } catch (e: any) {
+      console.error("Erro ao salvar informações de pagamento:", e);
+      res.status(500).json({ success: false, error: "Erro ao salvar informações de pagamento" });
     }
   });
 

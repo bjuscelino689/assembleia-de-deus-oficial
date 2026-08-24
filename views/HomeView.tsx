@@ -3,8 +3,9 @@ import { ChurchInfo, UserProfile } from '../types';
 import { 
   Calendar, Users, Heart, BookOpen, Image as ImageIcon, Sparkles, 
   ChevronRight, Star, Film, Building2, UserCheck, UserPlus, LogIn, 
-  Phone, Music, Headphones, Radio, Flame, ShieldCheck
+  Phone, Music, Headphones, Radio, Flame, ShieldCheck, QrCode
 } from 'lucide-react';
+import { AccessPaymentCard } from '../components/AccessPaymentCard';
 
 interface HomeViewProps {
   churchInfo: ChurchInfo;
@@ -96,6 +97,13 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
           </div>
         </div>
       </section>
+
+      {/* ÁREA DE PAGAMENTO DO MEU ACESSO (VENCIMENTO TODO DIA 28 & QUADRO DE QR CODE) */}
+      <AccessPaymentCard 
+        user={user} 
+        churchInfo={churchInfo} 
+        onOpenAuth={onOpenAuth} 
+      />
 
       {/* DESTAQUE PESQUISA BÍBLICA */}
       <div 
