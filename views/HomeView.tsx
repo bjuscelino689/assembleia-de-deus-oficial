@@ -14,7 +14,7 @@ interface HomeViewProps {
 }
 
 const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpenAuth }) => {
-  const isVisitor = !user || !user.phone || user.name === 'Visitante' || user.id.startsWith('visitante_');
+  const isVisitor = !user || user.name === 'Visitante' || (user.id ? user.id.startsWith('visitante_') : true);
 
   return (
     <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-slide-up max-w-2xl mx-auto">
