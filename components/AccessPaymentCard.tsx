@@ -171,8 +171,8 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
 
   // Abrir WhatsApp para enviar comprovante
   const handleSendWhatsAppReceipt = () => {
-    const phone = churchInfo?.phone || '(11) 99876-5432';
-    const cleanPhone = phone.replace(/\D/g, '');
+    // Número fixo do setor administrativo para envio do comprovante: (98) 97008-4240
+    const cleanPhone = '98970084240';
     const memberName = user?.name && user.name !== 'Visitante' ? user.name : 'Usuário do Aplicativo';
 
     const text = `📄 *Comprovante de Pagamento*\n\nOlá, estou enviando o comprovante referente ao *Pagamento do meu acesso* (Vencimento todo dia 28).\n\n👤 *Nome:* ${memberName}\n📅 *Referência:* Vencimento Dia 28\n\nFavor confirmar o recebimento e liberação do acesso. Obrigado!`;
@@ -457,6 +457,7 @@ export const AccessPaymentCard: React.FC<AccessPaymentCardProps> = ({ user, chur
                   type="button"
                   onClick={handleSendWhatsAppReceipt}
                   className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/30 active:scale-95 transition-all cursor-pointer"
+                  title="Enviar comprovante para o WhatsApp (98) 97008-4240"
                 >
                   <Send size={15} />
                   <span>Enviar Comprovante (WhatsApp)</span>
