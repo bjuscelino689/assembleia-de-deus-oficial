@@ -37,6 +37,7 @@ import { BibleSearchView } from './views/BibleSearchView';
 import { HeaderNav } from './components/HeaderNav';
 import { ShareModal } from './components/ShareModal';
 import { MemberAuthModal } from './components/MemberAuthModal';
+import { AccessPaymentCard } from './components/AccessPaymentCard';
 
 // ÍCONES NAVEGAÇÃO
 import { 
@@ -1038,8 +1039,8 @@ export const App: React.FC = () => {
 
       {/* TELA DE BLOQUEIO DO SISTEMA ADMINISTRATIVO */}
       {isCurrentUserBlocked && currentView !== 'pastor' && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border-2 border-rose-500/30 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-2xl animate-slide-up">
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-zinc-900 border-2 border-rose-500/30 rounded-[2.5rem] p-5 sm:p-7 max-w-xl w-full text-center space-y-5 shadow-2xl animate-slide-up my-auto max-h-[94vh] overflow-y-auto">
             <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/50 text-rose-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-rose-600/10">
               <ShieldAlert size={34} />
             </div>
@@ -1052,7 +1053,7 @@ export const App: React.FC = () => {
                 Conta Restrita pelo Sistema Administrativo
               </h2>
               <p className="text-xs font-bold text-slate-600 dark:text-zinc-300 leading-relaxed">
-                Olá, <strong className="text-slate-900 dark:text-white">{user.name}</strong>. Seu acesso ao aplicativo da <strong className="text-slate-900 dark:text-white">{churchInfo.name}</strong> foi temporariamente suspenso pelo sistema administrativo.
+                Olá, <strong className="text-slate-900 dark:text-white">{user.name}</strong>. Seu acesso ao aplicativo foi temporariamente suspenso. Para regularizar seu cadastro e liberar seu acesso, efetue o pagamento abaixo ou fale com o setor administrativo.
               </p>
             </div>
 
@@ -1065,11 +1066,20 @@ export const App: React.FC = () => {
               </div>
             )}
 
-            <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 rounded-2xl text-[11px] font-medium text-slate-500 dark:text-zinc-400 leading-relaxed border border-slate-100 dark:border-zinc-800">
-              Em breve você receberá informações sobre o motivo do bloqueio diretamente pelo seu WhatsApp cadastrado. Caso necessite de esclarecimentos imediatos, entre em contato com um atendente do sistema administrativo pelo WhatsApp: <strong className="text-slate-900 dark:text-white font-black">(98) 97008-4240</strong>.
+            {/* ÁREA DE PAGAMENTO DO ACESSO / QR CODE PIX */}
+            <div className="text-left">
+              <AccessPaymentCard
+                user={user}
+                churchInfo={churchInfo}
+                onOpenAuth={() => setShowAuthModal(true)}
+              />
             </div>
 
-            <div className="space-y-2.5 pt-2">
+            <div className="p-4 bg-slate-50 dark:bg-zinc-800/60 rounded-2xl text-[11px] font-medium text-slate-500 dark:text-zinc-400 leading-relaxed border border-slate-100 dark:border-zinc-800 text-center">
+              Após efetuar o pagamento pelo QR Code ou Chave Pix acima, clique no botão para enviar o comprovante via WhatsApp para que seu acesso seja liberado imediatamente pelo setor administrativo.
+            </div>
+
+            <div className="space-y-2.5 pt-1">
               <a
                 href="https://wa.me/5598970084240"
                 target="_blank"
