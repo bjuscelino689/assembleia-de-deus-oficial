@@ -166,6 +166,7 @@ export const App: React.FC = () => {
   // VÍDEOS DA IGREJA
   const [videos, setVideos] = useState<VideoItem[]>(() => filterActiveVideos(safeLocalStorageGet('ad_videos', [])));
   const [members, setMembers] = useState<Member[]>(() => deduplicateMembersList(safeLocalStorageGet('ad_members', [])));
+  const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
 
   // CHAT & PASSAGEM DE PLANTÃO (MENSAGENS)
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
