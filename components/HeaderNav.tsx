@@ -1,10 +1,11 @@
 import React from 'react';
-import { UserProfile, isMasterAdminEmail } from '../types';
-import { ShieldCheck, Sun, Moon, Share2, Laptop, User, Star, Lock, LogOut, Building2 } from 'lucide-react';
+import { UserProfile, isMasterAdminEmail, ChurchInfo } from '../types';
+import { ShieldCheck, Sun, Moon, Share2, Laptop, User, Star, Lock, LogOut, Building2, Crown, Calendar } from 'lucide-react';
 
 interface HeaderNavProps {
   user: UserProfile;
   darkMode: boolean;
+  churchInfo?: ChurchInfo;
   onToggleDarkMode: () => void;
   onOpenShare: () => void;
   onOpenAdmin: () => void;
@@ -17,6 +18,7 @@ interface HeaderNavProps {
 export const HeaderNav: React.FC<HeaderNavProps> = ({
   user,
   darkMode,
+  churchInfo,
   onToggleDarkMode,
   onOpenShare,
   onOpenAdmin,
@@ -25,6 +27,15 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onLogout
 }) => {
   const isMasterAdmin = Boolean(user && user.email && isMasterAdminEmail(user.email));
+  const isDesignatedPastor = Boolean(
+    user && 
+    !isMasterAdmin && 
+    (
+      user.isPastorAdmin === true || 
+      user.role === 'PASTOR' ||
+      (churchInfo?.pastorAdminId && (user.id === churchInfo.pastorAdminId || (user.email && churchInfo.pastorAdminEmail && user.email.toLowerCase() === churchInfo.pastorAdminEmail.toLowerCase())))
+    )
+  );
 
   return (
     <header className={`sticky top-0 z-40 backdrop-blur-md border-b transition-colors ${
@@ -56,6 +67,10 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
                 <span className="hidden sm:inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full font-black text-[9px] border border-purple-500/20 shrink-0">
                   <ShieldCheck size={10} /> Gabinete Pastoral
                 </span>
+              ) : isDesignatedPastor ? (
+                <span className="hidden sm:inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full font-black text-[9px] border border-amber-500/20 shrink-0">
+                  <Crown size={10} /> Pastora Designada
+                </span>
               ) : (
                 <span className="hidden sm:inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full font-black text-[9px] shrink-0">
                   <Building2 size={10} /> Templo Sede
@@ -67,15 +82,27 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
 
         {/* CONTROLES E AÇÕES */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* BOTÃO PAINEL PASTORAL ADM - EXCLUSIVO PARA O ADMINISTRADOR MASTER (bjuscelino33@gmail.com) */}
+          {/* BOTÃO PAINEL PASTORAL ADM - EXCLUSIVO PARA O ADMINISTRADOR MASTER (Pr. Juscelino) */}
           {isMasterAdmin && (
             <button
               onClick={onOpenAdmin}
-              className="p-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-purple-500/20 hover:scale-105 active:scale-95 transition-all shrink-0"
+              className="p-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-purple-500/20 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
               title="Painel Pastoral / Área do Pastor"
             >
               <Lock size={14} className="text-amber-300" />
               <span className="hidden md:inline">Painel ADM</span>
+            </button>
+          )}
+
+          {/* BOTÃO AGENDA DA PASTORA - EXCLUSIVO PARA A PASTORA DESIGNADA (Irmã Francisca) */}
+          {isDesignatedPastor && (
+            <button
+              onClick={onOpenAdmin}
+              className="p-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer border border-amber-300/40"
+              title="Acessar Agenda & Cultos da Igreja"
+            >
+              <Crown size={14} className="text-slate-950" />
+              <span className="inline">Agenda da Pastora</span>
             </button>
           )}
 

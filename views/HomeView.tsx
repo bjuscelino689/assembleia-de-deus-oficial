@@ -1,9 +1,9 @@
 import React from 'react';
-import { ChurchInfo, UserProfile } from '../types';
+import { ChurchInfo, UserProfile, isMasterAdminEmail } from '../types';
 import { 
   Calendar, Users, Heart, BookOpen, Image as ImageIcon, Sparkles, 
   ChevronRight, Star, Film, Building2, UserCheck, UserPlus, LogIn, 
-  Phone, Music, Headphones, Radio, Flame, ShieldCheck, QrCode
+  Phone, Music, Headphones, Radio, Flame, ShieldCheck, QrCode, Crown, Lock
 } from 'lucide-react';
 import { AccessPaymentCard } from '../components/AccessPaymentCard';
 
@@ -16,6 +16,16 @@ interface HomeViewProps {
 
 const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpenAuth }) => {
   const isVisitor = !user || user.name === 'Visitante' || (user.id ? user.id.startsWith('visitante_') : true);
+  const isMasterAdmin = Boolean(user && user.email && isMasterAdminEmail(user.email));
+  const isDesignatedPastor = Boolean(
+    user && 
+    !isMasterAdmin && 
+    (
+      user.isPastorAdmin === true || 
+      user.role === 'PASTOR' ||
+      (churchInfo?.pastorAdminId && (user.id === churchInfo.pastorAdminId || (user.email && churchInfo.pastorAdminEmail && user.email.toLowerCase() === churchInfo.pastorAdminEmail.toLowerCase())))
+    )
+  );
 
   return (
     <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 animate-slide-up max-w-2xl mx-auto">
@@ -55,7 +65,7 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 block">
-                Membro Conectado • Paz do Senhor!
+                {isMasterAdmin ? '👑 Pastor Presidente' : isDesignatedPastor ? '👑 Pastora Designada' : 'Membro Conectado • Paz do Senhor!'}
               </span>
               <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
                 {user.name}
@@ -77,6 +87,58 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
               Minha Conta
             </button>
           )}
+        </div>
+      )}
+
+      {/* DESTAQUE EXCLUSIVO PARA A PASTORA DESIGNADA (Irmã Francisca) */}
+      {isDesignatedPastor && (
+        <div 
+          onClick={() => onNavigate('pastor')}
+          className="bg-gradient-to-r from-amber-500 via-amber-600 to-purple-700 text-slate-950 p-5 rounded-[2.2rem] shadow-xl shadow-amber-500/20 flex items-center justify-between gap-4 cursor-pointer active:scale-[0.98] transition-all border-2 border-amber-300/40"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-3.5 bg-white/25 backdrop-blur-md rounded-2xl border border-white/30 text-slate-950">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest bg-slate-950 text-amber-300 px-2.5 py-0.5 rounded-full">
+                  Área da Pastora Designada
+                </span>
+              </div>
+              <h3 className="font-black text-base text-white mt-0.5">Acessar Agenda & Gestão de Cultos</h3>
+              <p className="text-xs text-amber-100 font-medium">Agendar cultos, visitas pastorais, reuniões e eventos</p>
+            </div>
+          </div>
+          <div className="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-white">
+            <ChevronRight size={18} />
+          </div>
+        </div>
+      )}
+
+      {/* DESTAQUE EXCLUSIVO PARA O PASTOR MASTER (Pr. Juscelino) */}
+      {isMasterAdmin && (
+        <div 
+          onClick={() => onNavigate('pastor')}
+          className="bg-gradient-to-r from-purple-800 via-indigo-800 to-slate-950 text-white p-5 rounded-[2.2rem] shadow-xl shadow-purple-500/20 flex items-center justify-between gap-4 cursor-pointer active:scale-[0.98] transition-all border border-purple-500/30"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-3.5 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 text-amber-300">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest bg-amber-400/25 text-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300/30">
+                  Gabinete Pastoral
+                </span>
+              </div>
+              <h3 className="font-black text-base text-white mt-0.5">Painel Administrativo Geral</h3>
+              <p className="text-xs text-purple-200 font-medium">Gerenciar membros, bloqueios, finanças e agendamentos</p>
+            </div>
+          </div>
+          <div className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white">
+            <ChevronRight size={18} />
+          </div>
         </div>
       )}
 
@@ -142,6 +204,13 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
         <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 ml-2">Vida na Igreja</h3>
         <div className="space-y-3">
           <QuickLink 
+            onClick={() => onNavigate('pastoral_word')} 
+            icon={<ShieldCheck className="text-amber-500" />} 
+            title="Palavra Pastoral" 
+            desc="Mensagens, devocional diário e orientações espirituais da liderança" 
+            color="border-l-amber-500" 
+          />
+          <QuickLink 
             onClick={() => onNavigate('bible_search')} 
             icon={<BookOpen className="text-indigo-600" />} 
             title="Pesquisa Bíblica" 
@@ -161,13 +230,6 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
             title="Mural da Comunidade" 
             desc="Compartilhe testemunhos, versículos e comunhão com os irmãos" 
             color="border-l-purple-600" 
-          />
-          <QuickLink 
-            onClick={() => onNavigate('pastor')} 
-            icon={<ShieldCheck className="text-amber-500" />} 
-            title="Palavra Pastoral" 
-            desc="Mensagens, avisos oficiais e orientações da liderança" 
-            color="border-l-amber-500" 
           />
           <QuickLink 
             onClick={() => onNavigate('videos')} 
@@ -195,6 +257,29 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
     </div>
   );
 };
+
+const MenuBtn: React.FC<{ onClick: () => void; icon: React.ReactElement; label: string; color: string }> = ({ onClick, icon, label, color }) => (
+  <button onClick={onClick} className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-all cursor-pointer">
+    <div className={`p-4 ${color} text-white rounded-2xl shadow-lg`}>
+      {React.cloneElement(icon, { size: 30 })}
+    </div>
+    <span className="font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight text-center">{label}</span>
+  </button>
+);
+
+const QuickLink: React.FC<{ onClick: () => void; icon: React.ReactNode; title: string; desc: string; color: string }> = ({ onClick, icon, title, desc, color }) => (
+  <button onClick={onClick} className={`w-full bg-white dark:bg-zinc-900 p-5 rounded-[2rem] border border-slate-100 dark:border-zinc-800 flex items-center gap-4 active:scale-[0.98] transition-all border-l-[8px] ${color} cursor-pointer`}>
+    <div className="p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl">{icon}</div>
+    <div className="flex-1 text-left">
+      <h4 className="font-black text-slate-900 dark:text-zinc-100 text-sm">{title}</h4>
+      <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium line-clamp-1">{desc}</p>
+    </div>
+    <ChevronRight size={18} className="text-slate-400" />
+  </button>
+);
+
+export default HomeView;
+
 
 const MenuBtn: React.FC<{ onClick: () => void; icon: React.ReactElement; label: string; color: string }> = ({ onClick, icon, label, color }) => (
   <button onClick={onClick} className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-all cursor-pointer">
