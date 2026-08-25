@@ -376,37 +376,19 @@ export const App: React.FC = () => {
       }
     }).catch(() => {});
 
-    // 5. Sincroniza membros com a Nuvem Firestore e Servidor
-    fetchCollectionFromFirestore<Member>('members').then(remoteMembers => {
-      if (Array.isArray(remoteMembers) && remoteMembers.length > 0) {
-        setMembers(prev => {
-          const map = new Map<string, Member>();
-          prev.forEach(m => { 
-            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) map.set(m.id, m); 
-          });
-          remoteMembers.forEach(m => { 
-            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) map.set(m.id, m); 
-          });
-          const merged = deduplicateMembersList(Array.from(map.values()));
-          safeLocalStorageSet('ad_members', merged);
-          return merged;
-        });
-      }
-    }).catch(() => {});
-
-    fetch('/api/members')
-      .then(r => r.json())
-      .then(serverMembers => {
-        if (Array.isArray(serverMembers) && serverMembers.length > 0) {
+    // 5. Sincroniza membros com a Nuvem Firestore e Servidor em Tempo Real
+    const syncAllMembersRealtime = () => {
+      fetchCollectionFromFirestore<Member>('members').then(remoteMembers => {
+        if (Array.isArray(remoteMembers) && remoteMembers.length > 0) {
           setMembers(prev => {
             const map = new Map<string, Member>();
             prev.forEach(m => { 
               if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) map.set(m.id, m); 
             });
-            serverMembers.forEach((m: any) => {
+            remoteMembers.forEach(m => { 
               if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
                 const existing = map.get(m.id);
-                map.set(m.id, existing ? { ...existing, ...m } : m);
+                map.set(m.id, existing ? { ...existing, ...m, accessStatus: m.accessStatus || existing.accessStatus || 'PENDENTE_LIBERACAO' } : m);
               }
             });
             const merged = deduplicateMembersList(Array.from(map.values()));
@@ -414,8 +396,34 @@ export const App: React.FC = () => {
             return merged;
           });
         }
-      })
-      .catch(() => {});
+      }).catch(() => {});
+
+      fetch('/api/members')
+        .then(r => r.json())
+        .then(serverMembers => {
+          if (Array.isArray(serverMembers) && serverMembers.length > 0) {
+            setMembers(prev => {
+              const map = new Map<string, Member>();
+              prev.forEach(m => { 
+                if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) map.set(m.id, m); 
+              });
+              serverMembers.forEach((m: any) => {
+                if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+                  const existing = map.get(m.id);
+                  map.set(m.id, existing ? { ...existing, ...m, accessStatus: m.accessStatus || existing.accessStatus || 'PENDENTE_LIBERACAO' } : m);
+                }
+              });
+              const merged = deduplicateMembersList(Array.from(map.values()));
+              safeLocalStorageSet('ad_members', merged);
+              return merged;
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    syncAllMembersRealtime();
+    const membersPollingInterval = setInterval(syncAllMembersRealtime, 2500);
 
     // 6. Sincroniza mensagens de chat do Firestore e Servidor
     fetchCollectionFromFirestore<ChatMessage>('chat_messages').then(remoteMsgs => {
@@ -472,6 +480,7 @@ export const App: React.FC = () => {
     });
 
     return () => {
+      clearInterval(membersPollingInterval);
       if (typeof unsubscribeMembers === 'function') {
         unsubscribeMembers();
       }
@@ -618,15 +627,18 @@ export const App: React.FC = () => {
 
     if (found) {
       const isBlocked = Boolean(found.isBlocked || found.accessStatus === 'BLOQUEADO');
+      const isMaster = Boolean(found.role === 'PASTOR' || found.role === 'ADMIN' || found.email === 'bjuscelino33@gmail.com');
+      const finalStatus = isMaster ? 'LIBERADO' : (found.accessStatus || (isBlocked ? 'BLOQUEADO' : 'PENDENTE_LIBERACAO'));
+
       const loggedUser: UserProfile = {
         id: found.id,
         name: found.name,
         email: found.email || '',
         phone: found.phone || '',
-        role: (found.role === 'PASTOR' || found.role === 'ADMIN') ? 'ADMIN_MASTER' : 'MEMBRO',
-        isAdmin: (found.role === 'PASTOR' || found.role === 'ADMIN'),
+        role: isMaster ? 'ADMIN_MASTER' : 'MEMBRO',
+        isAdmin: isMaster,
         isBlocked: isBlocked,
-        accessStatus: found.accessStatus || (isBlocked ? 'BLOQUEADO' : 'LIBERADO'),
+        accessStatus: finalStatus,
         corenStatus: 'ATIVO',
         state: 'SP',
         city: 'São Paulo',
@@ -768,7 +780,7 @@ export const App: React.FC = () => {
         setUser(prev => {
           const updated: UserProfile = {
             ...prev,
-            accessStatus: currentMemberRecord.accessStatus || (currentMemberRecord.isBlocked ? 'BLOQUEADO' : 'LIBERADO'),
+            accessStatus: currentMemberRecord.accessStatus || (currentMemberRecord.isBlocked ? 'BLOQUEADO' : (prev.isAdmin ? 'LIBERADO' : 'PENDENTE_LIBERACAO')),
             isBlocked: Boolean(currentMemberRecord.isBlocked)
           };
           safeLocalStorageSet('ad_user', updated);
@@ -776,7 +788,7 @@ export const App: React.FC = () => {
         });
       }
     }
-  }, [currentMemberRecord, user.id, user.accessStatus, user.isBlocked]);
+  }, [currentMemberRecord, user.id, user.accessStatus, user.isBlocked, user.isAdmin]);
 
   // Se a conta do usuário logado foi excluída permanentemente pelo pastor/admin em qualquer dispositivo, encerra a sessão imediatamente
   useEffect(() => {
@@ -796,7 +808,8 @@ export const App: React.FC = () => {
   // Polling automático para membros aguardando liberação
   useEffect(() => {
     if (isCurrentUserPending) {
-      const interval = setInterval(() => {
+      const checkStatus = () => {
+        // 1. Busca Firestore
         fetchCollectionFromFirestore<Member>('members').then(remoteMembers => {
           if (Array.isArray(remoteMembers)) {
             const found = remoteMembers.find(m => 
@@ -813,8 +826,28 @@ export const App: React.FC = () => {
             }
           }
         }).catch(() => {});
-      }, 3000);
 
+        // 2. Busca Servidor
+        fetch('/api/members').then(r => r.json()).then(serverMembers => {
+          if (Array.isArray(serverMembers)) {
+            const found = serverMembers.find((m: any) => 
+              (m.id && user.id && m.id === user.id) ||
+              (m.phone && user.phone && String(m.phone).replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+              (m.email && user.email && String(m.email).toLowerCase() === user.email.toLowerCase())
+            );
+            if (found && found.accessStatus === 'LIBERADO' && !found.isBlocked) {
+              setUser(prev => {
+                const updated: UserProfile = { ...prev, accessStatus: 'LIBERADO', isBlocked: false };
+                safeLocalStorageSet('ad_user', updated);
+                return updated;
+              });
+            }
+          }
+        }).catch(() => {});
+      };
+
+      checkStatus();
+      const interval = setInterval(checkStatus, 2500);
       return () => clearInterval(interval);
     }
   }, [isCurrentUserPending, user.id, user.phone, user.email]);

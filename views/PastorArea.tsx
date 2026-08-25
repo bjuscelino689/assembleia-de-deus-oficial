@@ -227,7 +227,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                   email: u.email || '',
                   role: u.specialty || (u.isAdmin ? 'PASTOR' : 'Membro'),
                   isBlocked: Boolean(u.isBlocked || u.accessStatus === 'BLOQUEADO'),
-                  accessStatus: u.accessStatus || (u.isBlocked ? 'BLOQUEADO' : 'LIBERADO'),
+                  accessStatus: u.accessStatus || (u.isBlocked ? 'BLOQUEADO' : 'PENDENTE_LIBERACAO'),
                   createdAt: u.createdAt || new Date().toISOString().split('T')[0],
                   lastActiveAt: u.lastActiveAt ? Number(u.lastActiveAt) : undefined,
                   isOnline: Boolean(u.isOnline)
@@ -236,6 +236,8 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                 const existing = map.get(u.id)!;
                 map.set(u.id, {
                   ...existing,
+                  accessStatus: existing.accessStatus || u.accessStatus || 'PENDENTE_LIBERACAO',
+                  isBlocked: existing.isBlocked !== undefined ? existing.isBlocked : Boolean(u.isBlocked),
                   lastActiveAt: u.lastActiveAt ? Number(u.lastActiveAt) : existing.lastActiveAt,
                   isOnline: Boolean(u.isOnline ?? existing.isOnline)
                 });

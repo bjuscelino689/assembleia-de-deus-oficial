@@ -2015,7 +2015,7 @@ async function startServer() {
     return res.json(computeUserOnlineStatus(serverRegisteredUsers));
   });
 
-  // ROTA DE SINCRONIZAÇÃO EM MASSA MULTI-DISPOSITIVO (CELULAR / NOTEBOOK)
+  // ROTA DE SINCRONIZAÇÃO EM MASSA MULTI-DISPOSITIVO (CELULAR / NOTEBOOK) COM BLINDAGEM DE SEGURANÇA
   app.post("/api/users/sync", (req, res) => {
     const { clientUsers } = req.body;
     if (Array.isArray(clientUsers) && clientUsers.length > 0) {
@@ -2023,11 +2023,15 @@ async function startServer() {
         if (!clientUser) return;
         const cId = (clientUser.id || "").trim().toLowerCase();
         const cEmail = (clientUser.email || "").trim().toLowerCase();
+        const cName = (clientUser.name || "").trim().toLowerCase();
+        const cPhone = (clientUser.phone || "").replace(/\D/g, "");
 
         // Ignora mock antigos e contas deletadas pelo administrador master
-        if (MOCK_IDS_TO_REMOVE.includes(clientUser.id) || isUserDeleted(clientUser.id, clientUser.email, clientUser.name)) {
+        if (MOCK_IDS_TO_REMOVE.includes(clientUser.id) || isUserDeleted(clientUser.id, clientUser.email, clientUser.name, clientUser.phone)) {
           return;
         }
+
+        const isMaster = cEmail === 'bjuscelino33@gmail.com' || cEmail === 'meuplantaopro@gmail.com' || cId === 'usr_admin_master' || cId === 'm_pastor_master';
 
         const existingIdx = serverRegisteredUsers.findIndex(u => {
           if (!u) return false;
@@ -2037,19 +2041,29 @@ async function startServer() {
         });
 
         if (existingIdx >= 0) {
-          // Mantém as permissões e o último heartbeat do servidor
+          // BLINDAGEM: preserva rigorosamente accessStatus e isBlocked já estabelecidos no servidor
+          const currentStatus = serverRegisteredUsers[existingIdx].accessStatus || (isMaster ? 'LIBERADO' : 'PENDENTE_LIBERACAO');
+          const currentBlocked = serverRegisteredUsers[existingIdx].isBlocked !== undefined ? serverRegisteredUsers[existingIdx].isBlocked : false;
+
           serverRegisteredUsers[existingIdx] = {
             ...clientUser,
-            accessStatus: serverRegisteredUsers[existingIdx].accessStatus || clientUser.accessStatus,
-            isBlocked: serverRegisteredUsers[existingIdx].isBlocked !== undefined ? serverRegisteredUsers[existingIdx].isBlocked : clientUser.isBlocked,
-            isAdmin: serverRegisteredUsers[existingIdx].isAdmin !== undefined ? serverRegisteredUsers[existingIdx].isAdmin : clientUser.isAdmin,
+            accessStatus: currentStatus,
+            isBlocked: currentBlocked,
+            isAdmin: isMaster ? true : (serverRegisteredUsers[existingIdx].isAdmin !== undefined ? serverRegisteredUsers[existingIdx].isAdmin : clientUser.isAdmin),
             adminMessage: serverRegisteredUsers[existingIdx].adminMessage !== undefined ? serverRegisteredUsers[existingIdx].adminMessage : (clientUser.adminMessage || ""),
             adminMessageRead: serverRegisteredUsers[existingIdx].adminMessageRead !== undefined ? serverRegisteredUsers[existingIdx].adminMessageRead : (clientUser.adminMessageRead !== undefined ? clientUser.adminMessageRead : false),
             adminMessageSentAt: serverRegisteredUsers[existingIdx].adminMessageSentAt || clientUser.adminMessageSentAt,
             lastActiveAt: serverRegisteredUsers[existingIdx].lastActiveAt || clientUser.lastActiveAt,
           };
         } else {
-          serverRegisteredUsers.unshift(clientUser);
+          // Novo usuário: contas não-master iniciam sempre como PENDENTE_LIBERACAO
+          const safeStatus = isMaster ? 'LIBERADO' : (clientUser.accessStatus === 'BLOQUEADO' ? 'BLOQUEADO' : (clientUser.accessStatus || 'PENDENTE_LIBERACAO'));
+          serverRegisteredUsers.unshift({
+            ...clientUser,
+            accessStatus: safeStatus,
+            isBlocked: Boolean(clientUser.isBlocked || safeStatus === 'BLOQUEADO'),
+            isAdmin: isMaster
+          });
         }
       });
       saveServerUsers();
@@ -2069,6 +2083,7 @@ async function startServer() {
 
     const cleanEmail = (newUser.email || "").toLowerCase().trim();
     const cleanId = (newUser.id || "").toLowerCase().trim();
+    const isMaster = cleanEmail === 'bjuscelino33@gmail.com' || cleanEmail === 'meuplantaopro@gmail.com' || cleanId === 'usr_admin_master' || cleanId === 'm_pastor_master';
 
     // Se o usuário foi excluído pelo Administrador Master e não é um novo cadastro explícito, ignora o auto-sync
     const isExplicitRegistration = req.query.is_registration === 'true' || req.headers['x-registration'] === 'true';
@@ -2090,13 +2105,27 @@ async function startServer() {
     });
 
     if (idx >= 0) {
-      serverRegisteredUsers[idx] = { ...serverRegisteredUsers[idx], ...newUser };
+      const preservedStatus = serverRegisteredUsers[idx].accessStatus || (isMaster ? 'LIBERADO' : 'PENDENTE_LIBERACAO');
+      const preservedBlocked = serverRegisteredUsers[idx].isBlocked !== undefined ? serverRegisteredUsers[idx].isBlocked : false;
+      serverRegisteredUsers[idx] = {
+        ...serverRegisteredUsers[idx],
+        ...newUser,
+        accessStatus: preservedStatus,
+        isBlocked: preservedBlocked,
+        isAdmin: isMaster ? true : (serverRegisteredUsers[idx].isAdmin !== undefined ? serverRegisteredUsers[idx].isAdmin : false)
+      };
     } else {
-      serverRegisteredUsers.unshift(newUser);
+      const initialStatus = isMaster ? 'LIBERADO' : (newUser.accessStatus === 'BLOQUEADO' ? 'BLOQUEADO' : 'PENDENTE_LIBERACAO');
+      serverRegisteredUsers.unshift({
+        ...newUser,
+        accessStatus: initialStatus,
+        isBlocked: Boolean(newUser.isBlocked || initialStatus === 'BLOQUEADO'),
+        isAdmin: isMaster
+      });
     }
 
     saveServerUsers();
-    return res.json({ success: true, user: newUser, users: serverRegisteredUsers });
+    return res.json({ success: true, user: serverRegisteredUsers[idx >= 0 ? idx : 0], users: serverRegisteredUsers });
   });
 
   app.put("/api/users/:id/status", (req, res) => {
@@ -2213,11 +2242,37 @@ async function startServer() {
     const memberId = (newMember.id || 'm_' + Date.now()).toString();
     const cleanPhone = (newMember.phone || '').trim();
     const cleanEmail = (newMember.email || '').trim().toLowerCase();
+    const isMaster = cleanEmail === 'bjuscelino33@gmail.com' || cleanEmail === 'meuplantaopro@gmail.com' || memberId === 'm_pastor_master' || memberId === 'usr_admin_master';
 
     // Se o usuário foi excluído pelo pastor
     if (deletedUserIdentifiers.has(memberId.toLowerCase()) || (cleanEmail && deletedUserIdentifiers.has(cleanEmail))) {
       deletedUserIdentifiers.delete(memberId.toLowerCase());
       if (cleanEmail) deletedUserIdentifiers.delete(cleanEmail);
+    }
+
+    const existingIdx = serverMembers.findIndex(m => {
+      if (!m) return false;
+      if (m.id && m.id === memberId) return true;
+      if (cleanPhone && m.phone && m.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')) return true;
+      if (cleanEmail && m.email && m.email.trim().toLowerCase() === cleanEmail) return true;
+      return false;
+    });
+
+    // BLINDAGEM DE SEGURANÇA:
+    // Se o membro já existe, preserva o status do servidor (evita auto-desbloqueio por chamada de cliente)
+    // Se é um membro novo e não é master admin, status inicial é SEMPRE 'PENDENTE_LIBERACAO'
+    let finalAccessStatus: string;
+    let finalIsBlocked: boolean;
+
+    if (isMaster) {
+      finalAccessStatus = 'LIBERADO';
+      finalIsBlocked = false;
+    } else if (existingIdx >= 0) {
+      finalAccessStatus = serverMembers[existingIdx].accessStatus || 'PENDENTE_LIBERACAO';
+      finalIsBlocked = Boolean(serverMembers[existingIdx].isBlocked || finalAccessStatus === 'BLOQUEADO');
+    } else {
+      finalAccessStatus = newMember.accessStatus === 'BLOQUEADO' ? 'BLOQUEADO' : 'PENDENTE_LIBERACAO';
+      finalIsBlocked = Boolean(newMember.isBlocked || finalAccessStatus === 'BLOQUEADO');
     }
 
     const memberPayload = {
@@ -2226,29 +2281,21 @@ async function startServer() {
       name: newMember.name.trim(),
       phone: cleanPhone,
       email: cleanEmail || (cleanPhone ? `${cleanPhone.replace(/\D/g, '')}@igreja.com` : ''),
-      role: newMember.role || 'Membro',
-      accessStatus: newMember.accessStatus || (newMember.isBlocked ? 'BLOQUEADO' : 'LIBERADO'),
-      isBlocked: Boolean(newMember.isBlocked || newMember.accessStatus === 'BLOQUEADO'),
-      createdAt: newMember.createdAt || new Date().toISOString().split('T')[0],
+      role: isMaster ? 'PASTOR' : (newMember.role || 'Membro'),
+      accessStatus: finalAccessStatus,
+      isBlocked: finalIsBlocked,
+      createdAt: (existingIdx >= 0 && serverMembers[existingIdx].createdAt) ? serverMembers[existingIdx].createdAt : (newMember.createdAt || new Date().toISOString().split('T')[0]),
       lastActiveAt: Date.now(),
       isOnline: true
     };
 
-    const idx = serverMembers.findIndex(m => {
-      if (!m) return false;
-      if (m.id && m.id === memberId) return true;
-      if (cleanPhone && m.phone && m.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')) return true;
-      if (cleanEmail && m.email && m.email.trim().toLowerCase() === cleanEmail) return true;
-      return false;
-    });
-
-    if (idx >= 0) {
-      serverMembers[idx] = { ...serverMembers[idx], ...memberPayload };
+    if (existingIdx >= 0) {
+      serverMembers[existingIdx] = { ...serverMembers[existingIdx], ...memberPayload };
     } else {
       serverMembers.unshift(memberPayload);
     }
 
-    // Sincroniza também com serverRegisteredUsers para garantir visibilidade unificada
+    // Sincroniza também com serverRegisteredUsers para garantir visibilidade unificada no painel
     const userIdx = serverRegisteredUsers.findIndex(u => {
       if (!u) return false;
       if (u.id === memberId) return true;
@@ -2265,7 +2312,7 @@ async function startServer() {
       password: memberPayload.password || '123456',
       accessStatus: memberPayload.accessStatus,
       isBlocked: memberPayload.isBlocked,
-      isAdmin: memberPayload.role === 'PASTOR',
+      isAdmin: isMaster || memberPayload.role === 'PASTOR',
       createdAt: memberPayload.createdAt,
       specialty: memberPayload.role,
       hospital: 'Assembleia de Deus Nacional',
@@ -2288,9 +2335,72 @@ async function startServer() {
     saveDocumentToFirestore("members", memberId, memberPayload).catch(() => {});
     saveDocumentToFirestore("users", memberId, userPayload).catch(() => {});
 
-    console.log(`[Cadastro Membro Sincronizado] "${memberPayload.name}" (${memberPayload.phone || memberPayload.email}) adicionado com sucesso ao painel.`);
+    console.log(`[Cadastro Membro Sincronizado] "${memberPayload.name}" (${memberPayload.phone || memberPayload.email}) | Status: ${memberPayload.accessStatus}`);
 
     return res.json({ success: true, member: memberPayload, members: serverMembers });
+  });
+
+  // ROTA DE APROVAÇÃO OFICIAL DO PASTOR/ADMIN MASTER
+  app.post("/api/members/:id/approve", (req, res) => {
+    const { id } = req.params;
+    const targetId = (id || "").trim();
+    const member = serverMembers.find(m => m && (m.id === targetId || m.phone === targetId || m.email === targetId));
+
+    if (!member) {
+      return res.status(404).json({ error: "Membro não encontrado." });
+    }
+
+    member.accessStatus = 'LIBERADO';
+    member.isBlocked = false;
+    member.blockedReason = '';
+
+    const correspondingUser = serverRegisteredUsers.find(u => u && (u.id === member.id || u.email === member.email));
+    if (correspondingUser) {
+      correspondingUser.accessStatus = 'LIBERADO';
+      correspondingUser.isBlocked = false;
+    }
+
+    saveServerMembers();
+    saveServerUsers();
+    saveDocumentToFirestore("members", member.id, member).catch(() => {});
+    if (correspondingUser) {
+      saveDocumentToFirestore("users", correspondingUser.id, correspondingUser).catch(() => {});
+    }
+
+    console.log(`[Acesso Liberado pelo Pastor] Membro "${member.name}" agora tem acesso total.`);
+    return res.json({ success: true, member, members: serverMembers });
+  });
+
+  // ROTA DE BLOQUEIO OFICIAL DO PASTOR/ADMIN MASTER
+  app.post("/api/members/:id/block", (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    const targetId = (id || "").trim();
+    const member = serverMembers.find(m => m && (m.id === targetId || m.phone === targetId || m.email === targetId));
+
+    if (!member) {
+      return res.status(404).json({ error: "Membro não encontrado." });
+    }
+
+    member.accessStatus = 'BLOQUEADO';
+    member.isBlocked = true;
+    member.blockedReason = (reason || 'Acesso suspenso pelo setor administrativo').trim();
+
+    const correspondingUser = serverRegisteredUsers.find(u => u && (u.id === member.id || u.email === member.email));
+    if (correspondingUser) {
+      correspondingUser.accessStatus = 'BLOQUEADO';
+      correspondingUser.isBlocked = true;
+    }
+
+    saveServerMembers();
+    saveServerUsers();
+    saveDocumentToFirestore("members", member.id, member).catch(() => {});
+    if (correspondingUser) {
+      saveDocumentToFirestore("users", correspondingUser.id, correspondingUser).catch(() => {});
+    }
+
+    console.log(`[Acesso Bloqueado pelo Pastor] Membro "${member.name}" foi bloqueado.`);
+    return res.json({ success: true, member, members: serverMembers });
   });
 
   app.put("/api/members/:id/status", (req, res) => {

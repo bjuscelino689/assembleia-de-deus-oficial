@@ -65,6 +65,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         }
       } catch (e) {}
 
+      // 1. Sincroniza usuários
       const res = await fetch('/api/users/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,6 +75,17 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         const serverUsers: UserProfile[] = await res.json();
         if (Array.isArray(serverUsers) && onRefreshUsers) {
           onRefreshUsers(serverUsers);
+        }
+      }
+
+      // 2. Busca membros e atualiza storage local para sincronismo no notebook
+      const resMembers = await fetch('/api/members');
+      if (resMembers.ok) {
+        const membersList = await resMembers.json();
+        if (Array.isArray(membersList)) {
+          try {
+            localStorage.setItem('ad_members', JSON.stringify(membersList));
+          } catch (e) {}
         }
       }
     } catch (e) {
