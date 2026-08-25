@@ -128,7 +128,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         })
       });
       if (res.ok) {
-        alert(`🎉 ${targetUser.name} ${willPromote ? 'agora é o Pastor Administrativo' : 'teve a função pastoral revogada'} com sucesso!`);
+        alert(`🎉 ${targetUser.name} ${willPromote ? 'agora é a Pastora / Pastor Designado com acesso total à Agenda da Igreja' : 'teve a função pastoral revogada'} com sucesso!`);
         refreshUsers();
       } else {
         alert('Não foi possível atualizar o cargo no servidor.');

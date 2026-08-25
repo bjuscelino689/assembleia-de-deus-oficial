@@ -82,25 +82,42 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   setCurrentMemberId = () => {},
   onBack
 }) => {
-  const isMasterAdmin = Boolean(
-    isAuthenticated ||
+  const isMasterAdminStrict = Boolean(
     (user && isMasterAdminEmail(user.email)) || 
-    (user && (user.isAdmin || user.role === 'ADMIN_MASTER' || user.role === 'PASTOR' || user.id === 'm_pastor_master')) ||
+    (user && (user.id === 'usr_admin_master' || user.id === 'm_pastor_master' || user.role === 'ADMIN_MASTER')) ||
     (() => {
       try {
         if (typeof window === 'undefined') return false;
         const e1 = (localStorage.getItem('nursecare_logged_user_email') || '').toLowerCase();
         const e2 = (localStorage.getItem('nursecare_user_session_email') || '').toLowerCase();
         const e3 = (localStorage.getItem('ad_user_email') || '').toLowerCase();
-        return e1 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e2 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e3 === PRIMARY_ADMIN_EMAIL.toLowerCase() || Boolean(localStorage.getItem('ad_pastor_pin'));
+        return e1 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e2 === PRIMARY_ADMIN_EMAIL.toLowerCase() || e3 === PRIMARY_ADMIN_EMAIL.toLowerCase();
       } catch (e) {
         return false;
       }
     })()
   );
+
+  const isDesignatedPastor = Boolean(
+    user && 
+    !isMasterAdminStrict &&
+    (
+      user.isPastorAdmin ||
+      user.role === 'PASTOR' ||
+      (user.id && (churchInfo?.pastorAdminId === user.id || (churchInfo as any)?.pastorAdminId === user.id)) ||
+      (user.email && (churchInfo?.pastorAdminEmail?.toLowerCase() === user.email.toLowerCase())) ||
+      (user.name && (user.name.toLowerCase().includes('francisca') || (churchInfo?.pastorName && user.name.toLowerCase() === churchInfo.pastorName.toLowerCase())))
+    )
+  );
+
+  const isMasterAdmin = isMasterAdminStrict;
+  const hasPastoralAccess = isMasterAdminStrict || isDesignatedPastor || isAuthenticated;
+
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [activeTab, setActiveTab] = useState<'membros' | 'delegacao' | 'agendamentos' | 'config'>('membros');
+  const [activeTab, setActiveTab] = useState<'membros' | 'delegacao' | 'agendamentos' | 'config'>(
+    isDesignatedPastor ? 'agendamentos' : 'membros'
+  );
   
   // Estado para Delegação Pastoral Exclusiva e Código de Acesso
   const [pastorDelegation, setPastorDelegation] = useState<{
@@ -417,9 +434,9 @@ const PastorArea: React.FC<PastorAreaProps> = ({
         if (data.members) setMembers(data.members);
       }
 
-      showToast(`🎉 ${targetMember.name} foi nomeado(a) como Pastor Administrativo! Código de acesso: ${code}`);
+      showToast(`🎉 ${targetMember.name} agora é a Pastora / Pastor Designado com acesso liberado aos Agendamentos da Igreja!`);
     } catch (e) {
-      showToast(`🎉 ${targetMember.name} foi nomeado(a) como Pastor Administrativo!`);
+      showToast(`🎉 ${targetMember.name} agora é a Pastora / Pastor Designado com acesso liberado aos Agendamentos da Igreja!`);
     } finally {
       setIsSavingDelegation(false);
     }
@@ -1064,6 +1081,14 @@ const PastorArea: React.FC<PastorAreaProps> = ({
 
   const filteredMembers = activeList.filter(m => {
     if (!m || !m.name) return false;
+    // Se for a pastora designada navegando, esconde o card do Pastor Master Oficial (Pr. Juscelino)
+    if (isDesignatedPastor) {
+      const isMaster = m.id === 'm_pastor_master' || 
+                       m.id === 'usr_admin_master' ||
+                       (m.email && isMasterAdminEmail(m.email)) ||
+                       (m.name && m.name.toLowerCase().includes('juscelino'));
+      if (isMaster) return false;
+    }
     const q = (memberSearch || '').toLowerCase().trim();
     if (!q) return true;
     return (
@@ -1080,7 +1105,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
   const totalActive = activeList.filter(m => m && m.accessStatus === 'LIBERADO' && !m.isBlocked).length;
   const totalOnline = activeList.filter(m => isMemberOnline(m)).length;
 
-  if (!isAuthenticated) {
+  if (!hasPastoralAccess) {
     return (
       <div className="p-6 space-y-8 animate-slide-up max-w-md mx-auto text-center min-h-[75vh] flex flex-col justify-center">
         <div className="w-20 h-20 bg-app-purple rounded-[2.5rem] text-white flex items-center justify-center mx-auto shadow-2xl shadow-app-purple/30 mb-2">
@@ -1177,10 +1202,16 @@ const PastorArea: React.FC<PastorAreaProps> = ({
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 bg-app-purple text-[9px] font-black uppercase tracking-widest rounded-md text-white shadow-sm">Painel ADM</span>
-                <span className="text-xs font-bold text-slate-300">Notebook / Celular</span>
+                <span className={`px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-md text-white shadow-sm ${isMasterAdminStrict ? 'bg-app-purple' : 'bg-amber-500 text-slate-950'}`}>
+                  {isMasterAdminStrict ? 'Painel ADM Master' : 'Pastora / Dirigente Designada'}
+                </span>
+                <span className="text-xs font-bold text-slate-300">
+                  {isMasterAdminStrict ? 'Administrador Geral da Igreja' : 'Gestão da Agenda da Igreja'}
+                </span>
               </div>
-              <h2 className="text-2xl font-black tracking-tight text-white mt-1">Pastor {churchInfo.pastorName}</h2>
+              <h2 className="text-2xl font-black tracking-tight text-white mt-1">
+                {isMasterAdminStrict ? 'Pr. Juscelino (Pastor Master Oficial)' : (user?.name || churchInfo.pastorName || 'Irmã Francisca')}
+              </h2>
             </div>
           </div>
 
@@ -1190,7 +1221,9 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                 <span>Acesso Autorizado</span>
               </p>
-              <p className="text-xs text-slate-300 font-bold">{members.length} Membros Cadastrados</p>
+              <p className="text-xs text-slate-300 font-bold">
+                {isDesignatedPastor ? 'Acesso aos Agendamentos' : `${members.length} Membros Cadastrados`}
+              </p>
             </div>
             <button 
               onClick={() => onNavigate('home')} 
@@ -1203,44 +1236,49 @@ const PastorArea: React.FC<PastorAreaProps> = ({
 
         {/* Navegação por Abas do Painel */}
         <div className="flex bg-slate-900/80 backdrop-blur-md p-1.5 rounded-[2rem] border border-white/10 shadow-lg gap-1 overflow-x-auto">
+          {/* Aba Agendamentos - Primeira para Pastor Designado */}
+          <button 
+            onClick={() => setActiveTab('agendamentos')}
+            className={`flex-1 py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'agendamentos' ? 'bg-app-purple text-white shadow-lg shadow-app-purple/30' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Calendar size={16} />
+            <span>Agenda da Igreja (Cultos, Visitas, Reuniões)</span>
+          </button>
+
+          {/* Aba Membros */}
           <button 
             onClick={() => setActiveTab('membros')}
             className={`flex-1 py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'membros' ? 'bg-app-purple text-white shadow-lg shadow-app-purple/30' : 'text-slate-400 hover:text-white'}`}
           >
             <Users size={16} />
-            <span>Membros</span>
-            {totalBlocked > 0 && isMasterAdmin && (
+            <span>{isMasterAdminStrict ? 'Membros & Bloqueios' : 'Lista de Membros'}</span>
+            {totalBlocked > 0 && isMasterAdminStrict && (
               <span className="w-5 h-5 bg-rose-600 text-white text-[10px] font-black rounded-full flex items-center justify-center">
                 {totalBlocked}
               </span>
             )}
           </button>
 
-          {isMasterAdmin && (
+          {/* Abas exclusivas para o Administrador Master Oficial */}
+          {isMasterAdminStrict && (
             <button 
               onClick={() => setActiveTab('delegacao')}
               className={`flex-1 py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'delegacao' ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30' : 'text-amber-400 hover:text-white'}`}
             >
               <Crown size={16} />
-              <span>👑 Delegação & Código Pastoral</span>
+              <span>👑 Nomear Pastor(a)</span>
             </button>
           )}
 
-          <button 
-            onClick={() => setActiveTab('agendamentos')}
-            className={`flex-1 py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'agendamentos' ? 'bg-app-purple text-white shadow-lg shadow-app-purple/30' : 'text-slate-400 hover:text-white'}`}
-          >
-            <Calendar size={16} />
-            <span>Agendamentos</span>
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('config')}
-            className={`py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'config' ? 'bg-app-purple text-white shadow-lg shadow-app-purple/30' : 'text-slate-400 hover:text-white'}`}
-          >
-            <KeyRound size={16} />
-            <span className="hidden sm:inline">Configurações</span>
-          </button>
+          {isMasterAdminStrict && (
+            <button 
+              onClick={() => setActiveTab('config')}
+              className={`py-3 px-4 rounded-[1.5rem] font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 whitespace-nowrap ${activeTab === 'config' ? 'bg-app-purple text-white shadow-lg shadow-app-purple/30' : 'text-slate-400 hover:text-white'}`}
+            >
+              <KeyRound size={16} />
+              <span className="hidden sm:inline">Configurações</span>
+            </button>
+          )}
         </div>
 
         {/* --- ABA 1: CONTROLE E BLOQUEIO DE MEMBROS --- */}
@@ -1617,6 +1655,13 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                               </span>
                             )}
 
+                            {/* Badge de Cargo Pastoral se for Pastor(a) Designado(a) */}
+                            {(member.isPastorAdmin || member.role === 'PASTOR' || pastorDelegation.pastorAdminId === member.id) && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-400/50 shadow-xs">
+                                👑 Pastora / Pastor Designado
+                              </span>
+                            )}
+
                             {member.isBlocked ? (
                               <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-950 text-rose-300 border border-rose-500/50">
                                 BLOQUEADO
@@ -1633,7 +1678,11 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                           </div>
 
                           <div className="flex items-center gap-3 text-xs text-slate-300 font-bold mt-1 flex-wrap">
-                            <span className="text-purple-300 font-semibold">{member.role}</span>
+                            <span className="text-purple-300 font-semibold">
+                              {(member.isPastorAdmin || member.role === 'PASTOR' || pastorDelegation.pastorAdminId === member.id)
+                                ? 'Pastora / Dirigente'
+                                : (member.role || 'Membro')}
+                            </span>
                             {member.phone && <span>• {member.phone}</span>}
                             {member.email && !member.email.endsWith('@igreja.com') && <span>• {member.email}</span>}
                           </div>
@@ -1648,7 +1697,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
 
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 flex-wrap">
                         {/* Botão Liberar Acesso rápido se pendente (exclusivo Administrador Master) */}
-                        {isMasterAdmin && member.accessStatus === 'PENDENTE_LIBERACAO' && !member.isBlocked && (
+                        {isMasterAdminStrict && member.accessStatus === 'PENDENTE_LIBERACAO' && !member.isBlocked && (
                           <button 
                             onClick={() => handleApproveMember(member)}
                             className="px-3.5 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/30 active:scale-95 transition-all"
@@ -1658,26 +1707,13 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                           </button>
                         )}
 
-                        {/* Botão Testar Acesso desse membro */}
-                        <button 
-                          onClick={() => {
-                            setCurrentMemberId(member.id);
-                            alert(`Perfil de teste alterado para ${member.name}. ${member.isBlocked ? 'Este membro está BLOQUEADO e não conseguirá usar o app.' : member.accessStatus === 'PENDENTE_LIBERACAO' ? 'Este membro está AGUARDANDO LIBERAÇÃO.' : 'Acesso liberado.'}`);
-                          }}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-1 border transition-all ${currentMemberId === member.id ? 'bg-app-purple text-white border-purple-400 shadow-md shadow-purple-900/40' : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'}`}
-                          title="Simular uso do app como este membro"
-                        >
-                          {currentMemberId === member.id ? <Check size={12}/> : null}
-                          {currentMemberId === member.id ? 'Membro Selecionado' : 'Simular Membro'}
-                        </button>
-
                         {/* Se for a conta do Pastor Master, mostra identificação protegida */}
                         {member.id === 'm_pastor_master' || (member.email && (member.email.toLowerCase() === 'bjuscelino33@gmail.com' || member.email.toLowerCase() === 'meuplantaopro@gmail.com')) ? (
                           <span className="px-3 py-2 bg-purple-950/80 border border-purple-500/40 text-purple-300 font-black rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                             <ShieldCheck size={14} className="text-purple-400" />
                             <span>Pastor Master (Oficial)</span>
                           </span>
-                        ) : isMasterAdmin ? (
+                        ) : isMasterAdminStrict ? (
                           <>
                             {/* Botão Nomear / Identificar Pastor Administrativo */}
                             {member.isPastorAdmin || pastorDelegation.pastorAdminId === member.id ? (
@@ -1686,14 +1722,6 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                                   <Crown size={13} className="text-amber-400" />
                                   <span>Pastor Designado</span>
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSendWhatsAppAccess(member)}
-                                  className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs transition-all"
-                                  title="Enviar Código de Acesso no WhatsApp"
-                                >
-                                  <MessageCircle size={14} />
-                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleRevokePastorRole(member)}
@@ -1742,7 +1770,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                                 href={`https://wa.me/55${member.phone.replace(/\D/g, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-[10px] uppercase flex items-center gap-1.5 transition-all shadow-sm"
+                                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-[10px] uppercase flex items-center gap-1.5 transition-all shadow-sm"
                                 title="Conversar com o membro no WhatsApp"
                               >
                                 <MessageCircle size={13} />
@@ -1751,7 +1779,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                             )}
                             <span className="px-2.5 py-1.5 bg-slate-800/80 border border-slate-700 text-slate-400 text-[10px] font-bold rounded-xl flex items-center gap-1">
                               <Lock size={12} className="text-amber-500" />
-                              <span>Bloqueio Exclusivo ADM Master</span>
+                              <span>Bloqueio Restrito</span>
                             </span>
                           </div>
                         )}
