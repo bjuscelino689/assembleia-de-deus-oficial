@@ -2530,17 +2530,72 @@ async function startServer() {
 
   app.post("/api/members/:id/promote-pastor", (req, res) => {
     const { id } = req.params;
-    const { isPastorAdmin, accessCode } = req.body;
+    const { isPastorAdmin, accessCode, name, phone, email, member: sentMember } = req.body;
 
     const targetId = (id || '').trim();
-    const member = serverMembers.find(m => m && (m.id === targetId || m.phone === targetId || m.email === targetId));
+    const cleanPhone = (phone || (sentMember && sentMember.phone) || '').replace(/\D/g, '');
+    const cleanEmail = (email || (sentMember && sentMember.email) || '').trim().toLowerCase();
+    const cleanName = (name || (sentMember && sentMember.name) || '').trim().toLowerCase();
 
+    // 1. Busca em serverMembers com correspondência flexível
+    let member = serverMembers.find(m => {
+      if (!m) return false;
+      if (m.id === targetId) return true;
+      if (m.phone && m.phone === targetId) return true;
+      if (m.email && m.email === targetId) return true;
+      if (cleanPhone && m.phone && m.phone.replace(/\D/g, '') === cleanPhone) return true;
+      if (cleanEmail && m.email && m.email.trim().toLowerCase() === cleanEmail) return true;
+      if (cleanName && m.name && m.name.trim().toLowerCase() === cleanName) return true;
+      return false;
+    });
+
+    // 2. Se não encontrou em serverMembers, busca em serverRegisteredUsers
     if (!member) {
-      return res.status(404).json({ error: "Membro não encontrado para delegação pastoral." });
+      const existingUser = serverRegisteredUsers.find(u => {
+        if (!u) return false;
+        if (u.id === targetId) return true;
+        if (cleanPhone && u.phone && u.phone.replace(/\D/g, '') === cleanPhone) return true;
+        if (cleanEmail && u.email && u.email.trim().toLowerCase() === cleanEmail) return true;
+        if (cleanName && u.name && u.name.trim().toLowerCase() === cleanName) return true;
+        return false;
+      });
+
+      if (existingUser) {
+        member = {
+          id: existingUser.id || targetId,
+          name: existingUser.name,
+          phone: existingUser.phone || '',
+          email: existingUser.email || '',
+          role: 'PASTOR',
+          accessStatus: 'LIBERADO',
+          isBlocked: false,
+          isPastorAdmin: true,
+          createdAt: existingUser.createdAt || new Date().toISOString().split('T')[0]
+        };
+        serverMembers.unshift(member);
+      } else if (sentMember && sentMember.name) {
+        member = {
+          id: sentMember.id || targetId || 'm_' + Date.now(),
+          name: sentMember.name,
+          phone: sentMember.phone || '',
+          email: sentMember.email || '',
+          role: 'PASTOR',
+          accessStatus: 'LIBERADO',
+          isBlocked: false,
+          isPastorAdmin: true,
+          createdAt: sentMember.createdAt || new Date().toISOString().split('T')[0]
+        };
+        serverMembers.unshift(member);
+      }
     }
 
-    const shouldPromote = Boolean(isPastorAdmin);
+    if (!member) {
+      return res.status(404).json({ error: "Membro não localizado no sistema." });
+    }
+
+    const shouldPromote = isPastorAdmin !== undefined ? Boolean(isPastorAdmin) : true;
     member.isPastorAdmin = shouldPromote;
+
     if (shouldPromote) {
       member.role = 'PASTOR';
       member.accessStatus = 'LIBERADO';
@@ -2556,33 +2611,67 @@ async function startServer() {
       if (serverPastorDelegation.pastorAdminId === member.id) {
         serverPastorDelegation.pastorAdminId = '';
         serverPastorDelegation.pastorAdminEmail = '';
+        serverPastorDelegation.pastorAdminName = 'Pr. Juscelino';
       }
     }
 
     // Atualiza também em serverRegisteredUsers
-    const correspondingUser = serverRegisteredUsers.find(u => u && (u.id === member.id || (u.email && u.email === member.email)));
+    let correspondingUser = serverRegisteredUsers.find(u => {
+      if (!u) return false;
+      if (u.id === member.id) return true;
+      if (cleanEmail && u.email && u.email.trim().toLowerCase() === cleanEmail) return true;
+      if (cleanPhone && u.phone && u.phone.replace(/\D/g, '') === cleanPhone) return true;
+      return false;
+    });
+
     if (correspondingUser) {
       correspondingUser.isPastorAdmin = shouldPromote;
       if (shouldPromote) {
         correspondingUser.specialty = 'PASTOR';
+        correspondingUser.role = 'PASTOR';
         correspondingUser.accessStatus = 'LIBERADO';
         correspondingUser.isBlocked = false;
       }
+    } else if (shouldPromote) {
+      correspondingUser = {
+        id: member.id,
+        name: member.name,
+        email: member.email || '',
+        phone: member.phone || '',
+        password: '123',
+        accessStatus: 'LIBERADO',
+        isBlocked: false,
+        isAdmin: true,
+        isPastorAdmin: true,
+        specialty: 'PASTOR',
+        role: 'PASTOR',
+        hospital: 'Assembleia de Deus Nacional',
+        state: 'SP',
+        city: 'São Paulo',
+        corenStatus: 'ATIVO',
+        createdAt: member.createdAt || new Date().toISOString()
+      };
+      serverRegisteredUsers.unshift(correspondingUser);
     }
 
     saveServerMembers();
     saveServerUsers();
     savePastorDelegation();
+
     saveDocumentToFirestore("members", member.id, member).catch(() => {});
     if (correspondingUser) {
       saveDocumentToFirestore("users", correspondingUser.id, correspondingUser).catch(() => {});
     }
+    saveDocumentToFirestore("system_settings", "pastor_delegation", serverPastorDelegation).catch(() => {});
+
+    console.log(`[Pastor Designado] "${member.name}" agora é Pastor Administrativo! Código: ${serverPastorDelegation.pastorAccessCode}`);
 
     return res.json({
       success: true,
       member,
       delegation: serverPastorDelegation,
-      members: serverMembers
+      members: serverMembers,
+      users: serverRegisteredUsers
     });
   });
 

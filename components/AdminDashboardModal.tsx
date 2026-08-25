@@ -115,14 +115,23 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
   const handlePromoteToPastor = async (targetUser: UserProfile) => {
     try {
-      const res = await fetch(`/api/members/${targetUser.id}/promote-pastor`, {
+      const willPromote = !targetUser.isPastorAdmin;
+      const res = await fetch(`/api/members/${encodeURIComponent(targetUser.id)}/promote-pastor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPastorAdmin: !targetUser.isPastorAdmin, accessCode: '1234' })
+        body: JSON.stringify({
+          isPastorAdmin: willPromote,
+          accessCode: '1234',
+          name: targetUser.name,
+          phone: targetUser.phone,
+          email: targetUser.email
+        })
       });
       if (res.ok) {
-        alert(`${targetUser.name} ${targetUser.isPastorAdmin ? 'não é mais' : 'agora é'} o Pastor Administrativo da igreja!`);
+        alert(`🎉 ${targetUser.name} ${willPromote ? 'agora é o Pastor Administrativo' : 'teve a função pastoral revogada'} com sucesso!`);
         refreshUsers();
+      } else {
+        alert('Não foi possível atualizar o cargo no servidor.');
       }
     } catch (e) {
       alert('Erro ao atualizar cargo pastoral.');
