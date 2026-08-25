@@ -16,6 +16,7 @@ import {
   filterActiveVideos, 
   filterActiveGallery,
   isUserOrMemberDeleted,
+  isGuestOrAnonymousUser,
   markMemberOrUserDeleted,
   filterActiveMembers,
   deduplicateMembersList,
@@ -514,7 +515,7 @@ export const App: React.FC = () => {
 
   // HEARTBEAT EM TEMPO REAL: MARCA USUÁRIO / MEMBRO ATIVO COMO ONLINE NO APP
   useEffect(() => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || isGuestOrAnonymousUser(user.id, user.email, user.phone, user.name)) return;
 
     const performHeartbeat = () => {
       const now = Date.now();
@@ -527,7 +528,7 @@ export const App: React.FC = () => {
       }).catch(() => {});
 
       // 2. Registra timestamp de atividade no Firestore se for membro
-      if (user.id && !user.id.startsWith('visitante_')) {
+      if (user.id && !isGuestOrAnonymousUser(user.id, user.email, user.phone, user.name)) {
         syncDocToFirestore('members', user.id, {
           id: user.id,
           name: user.name,
@@ -656,7 +657,7 @@ export const App: React.FC = () => {
     // Ao deslogar ou sair da conta, abre diretamente a tela de Identificação / Login
     localStorage.removeItem('ad_user');
     const guestUser: UserProfile = {
-      id: 'usr_guest_' + Date.now(),
+      id: 'usr_guest_unauthenticated',
       name: 'Aguardando Login',
       email: '',
       phone: '',

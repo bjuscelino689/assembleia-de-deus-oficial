@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuditLog, UserProfile, PRIMARY_ADMIN_EMAIL } from '../types';
+import { isGuestOrAnonymousUser } from '../utils/deletedSync';
 import { 
   ShieldCheck, Lock, Users, Activity, FileText, Server, AlertTriangle, Key, X, 
   Bell, RefreshCw, Database, Download, CheckCircle2, UserX, Search, Smartphone, 
@@ -210,7 +211,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
   // CATEGORIZAR USUÁRIOS GARANTINDO QUE NENHUM CADASTRO FIQUE OCULTO
   const nonAdminUsers = registeredUsers.filter(u => 
-    u && u.id && !u.isAdmin && u.id !== 'usr_admin_master' && (u.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL.toLowerCase()
+    u && u.id && !u.isAdmin && u.id !== 'usr_admin_master' && 
+    (u.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL.toLowerCase() &&
+    !isGuestOrAnonymousUser(u.id, u.email, u.phone, u.name)
   );
 
   const blockedUsers = nonAdminUsers.filter(u => 

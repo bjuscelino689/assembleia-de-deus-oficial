@@ -132,11 +132,55 @@ export function isMediaPostDeleted(id: string): boolean {
   return memoryDeleted.mediaPosts.has(String(id));
 }
 
+export function isGuestOrAnonymousUser(id?: string, email?: string, phone?: string, name?: string): boolean {
+  const normId = normalizeIdentifier(id);
+  const normEmail = normalizeIdentifier(email);
+  const normName = normalizeIdentifier(name);
+  const phoneDigits = extractPhoneDigits(phone);
+
+  if (
+    normId.startsWith('usr_guest') ||
+    normId.startsWith('visitante_') ||
+    normId.startsWith('guest_') ||
+    normId.startsWith('anon_') ||
+    normId === 'usr_guest_unauthenticated'
+  ) {
+    return true;
+  }
+
+  if (
+    normName === 'aguardando login' ||
+    normName === 'aguardando logui' ||
+    normName.includes('aguardando log') ||
+    normName === 'visitante' ||
+    normName === 'visitante (não autenticado)' ||
+    normName === 'visitante (nao autenticado)' ||
+    normName === 'aguardando cadastro ou login'
+  ) {
+    return true;
+  }
+
+  if (normEmail.includes('visitante@') || normEmail.includes('guest@')) {
+    return true;
+  }
+
+  if (!phoneDigits && (!normEmail || normEmail.includes('@igreja.com')) && normId.includes('guest')) {
+    return true;
+  }
+
+  return false;
+}
+
 export function isUserOrMemberDeleted(id?: string, email?: string, phone?: string, name?: string): boolean {
   const normId = normalizeIdentifier(id);
   const normEmail = normalizeIdentifier(email);
   const normName = normalizeIdentifier(name);
   const phoneDigits = extractPhoneDigits(phone);
+
+  // Usuários guests / anônimos nunca entram na lista de membros
+  if (isGuestOrAnonymousUser(id, email, phone, name)) {
+    return true;
+  }
 
   // Protege o pastor / administrador master contra deleção acidental
   if (

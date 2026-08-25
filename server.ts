@@ -617,11 +617,56 @@ try {
   serverRegisteredUsers = [...INITIAL_REGISTERED_USERS];
 }
 
+function isGuestOrAnonymous(id?: string, email?: string, name?: string, phone?: string): boolean {
+  const cleanId = (id || "").trim().toLowerCase();
+  const cleanEmail = (email || "").trim().toLowerCase();
+  const cleanName = (name || "").trim().toLowerCase();
+  const cleanPhone = (phone || "").replace(/\D/g, "");
+
+  if (
+    cleanId.startsWith("usr_guest") ||
+    cleanId.startsWith("visitante_") ||
+    cleanId.startsWith("guest_") ||
+    cleanId.startsWith("anon_") ||
+    cleanId === "usr_guest_unauthenticated"
+  ) {
+    return true;
+  }
+
+  if (
+    cleanName === "aguardando login" ||
+    cleanName === "aguardando logui" ||
+    cleanName.includes("aguardando log") ||
+    cleanName === "visitante" ||
+    cleanName === "visitante (não autenticado)" ||
+    cleanName === "visitante (nao autenticado)" ||
+    cleanName === "aguardando cadastro ou login"
+  ) {
+    return true;
+  }
+
+  if (cleanEmail.includes("visitante@") || cleanEmail.includes("guest@")) {
+    return true;
+  }
+
+  // Se não tem nem telefone nem email e o id é de visitante
+  if (!cleanPhone && (!cleanEmail || cleanEmail.includes("@igreja.com")) && cleanId.includes("guest")) {
+    return true;
+  }
+
+  return false;
+}
+
 function isUserDeleted(id?: string, email?: string, name?: string, phone?: string): boolean {
   const cleanId = (id || "").trim().toLowerCase();
   const cleanEmail = (email || "").trim().toLowerCase();
   const cleanName = (name || "").trim().toLowerCase();
   const cleanPhone = (phone || "").replace(/\D/g, "");
+
+  // Usuários anônimos e de login pendente não são membros do sistema
+  if (isGuestOrAnonymous(id, email, name, phone)) {
+    return true;
+  }
 
   // O Administrador Master NUNCA pode ser considerado deletado
   if (
@@ -696,6 +741,14 @@ function sanitizeAndDeduplicateServerAccounts() {
       return;
     }
 
+    if (isGuestOrAnonymous(m.id, m.email, m.name, m.phone)) {
+      if (m.id) {
+        deleteDocumentFromFirestore('members', String(m.id)).catch(() => {});
+        deleteDocumentFromFirestore('users', String(m.id)).catch(() => {});
+      }
+      return;
+    }
+
     if (isUserDeleted(m.id, m.email, m.name, m.phone)) return;
 
     if (seenMemberIds.has(mId)) return;
@@ -751,6 +804,14 @@ function sanitizeAndDeduplicateServerAccounts() {
       (uName.includes('juscelino') && (uName.includes('admin') || uName.includes('pastor')))
     ) {
       if (u.id !== 'usr_admin_master') {
+        deleteDocumentFromFirestore('users', String(u.id)).catch(() => {});
+        deleteDocumentFromFirestore('members', String(u.id)).catch(() => {});
+      }
+      return;
+    }
+
+    if (isGuestOrAnonymous(u.id, u.email, u.name, u.phone)) {
+      if (u.id) {
         deleteDocumentFromFirestore('users', String(u.id)).catch(() => {});
         deleteDocumentFromFirestore('members', String(u.id)).catch(() => {});
       }
@@ -2083,6 +2144,11 @@ async function startServer() {
 
     const cleanEmail = (newUser.email || "").toLowerCase().trim();
     const cleanId = (newUser.id || "").toLowerCase().trim();
+
+    if (isGuestOrAnonymous(cleanId, cleanEmail, newUser.name, newUser.phone)) {
+      return res.json({ success: true, ignored: true, users: serverRegisteredUsers });
+    }
+
     const isMaster = cleanEmail === 'bjuscelino33@gmail.com' || cleanEmail === 'meuplantaopro@gmail.com' || cleanId === 'usr_admin_master' || cleanId === 'm_pastor_master';
 
     // Se o usuário foi excluído pelo Administrador Master e não é um novo cadastro explícito, ignora o auto-sync
@@ -2242,6 +2308,11 @@ async function startServer() {
     const memberId = (newMember.id || 'm_' + Date.now()).toString();
     const cleanPhone = (newMember.phone || '').trim();
     const cleanEmail = (newMember.email || '').trim().toLowerCase();
+
+    if (isGuestOrAnonymous(memberId, cleanEmail, newMember.name, cleanPhone)) {
+      return res.json({ success: true, ignored: true, members: serverMembers });
+    }
+
     const isMaster = cleanEmail === 'bjuscelino33@gmail.com' || cleanEmail === 'meuplantaopro@gmail.com' || memberId === 'm_pastor_master' || memberId === 'usr_admin_master';
 
     // Se o usuário foi excluído pelo pastor

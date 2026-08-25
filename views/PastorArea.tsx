@@ -12,6 +12,7 @@ import {
 import { syncDocToFirestore, deleteDocFromFirestore, fetchCollectionFromFirestore, subscribeToCollection } from '../utils/clientFirebase';
 import { 
   isUserOrMemberDeleted, 
+  isGuestOrAnonymousUser,
   markMemberOrUserDeleted, 
   filterActiveMembers,
   deduplicateMembersList 
@@ -176,26 +177,26 @@ const PastorArea: React.FC<PastorAreaProps> = ({
         const safePrev = Array.isArray(prev) ? prev : [];
         const map = new Map<string, Member>();
         
-        // Membros do Firestore (ignora deletados)
+        // Membros do Firestore (ignora deletados e guests)
         if (Array.isArray(firestoreMembers)) {
           firestoreMembers.forEach(m => { 
-            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name) && !isGuestOrAnonymousUser(m.id, m.email, m.phone, m.name)) {
               map.set(m.id, m); 
             }
           });
         }
         
-        // Membros do Servidor (ignora deletados)
+        // Membros do Servidor (ignora deletados e guests)
         if (Array.isArray(serverList)) {
           serverList.forEach(m => {
-            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+            if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name) && !isGuestOrAnonymousUser(m.id, m.email, m.phone, m.name)) {
               const existing = map.get(m.id);
               map.set(m.id, existing ? { ...existing, ...m } : m);
             }
           });
         }
 
-        // Merge de Usuários Cadastrados (ignora deletados e ignora contas de admin master duplicadas)
+        // Merge de Usuários Cadastrados (ignora deletados, guests e ignora contas de admin master duplicadas)
         if (Array.isArray(userList)) {
           userList.forEach(u => {
             if (!u || !u.id || !u.name) return;
@@ -203,6 +204,11 @@ const PastorArea: React.FC<PastorAreaProps> = ({
             const uEmail = (u.email || '').toLowerCase().trim();
             const uName = (u.name || '').toLowerCase().trim();
             
+            // Nunca aceita visitantes anônimos / temporários
+            if (isGuestOrAnonymousUser(u.id, u.email, u.phone, u.name)) {
+              return;
+            }
+
             // Nunca duplica a conta do Pastor / Admin Master
             if (
               uId === 'usr_admin_master' || 
@@ -246,9 +252,9 @@ const PastorArea: React.FC<PastorAreaProps> = ({
           });
         }
 
-        // Mantém os que foram criados localmente (e não foram deletados)
+        // Mantém os que foram criados localmente (e não foram deletados e não são guests)
         safePrev.forEach(m => { 
-          if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+          if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name) && !isGuestOrAnonymousUser(m.id, m.email, m.phone, m.name)) {
             map.set(m.id, m); 
           }
         });
@@ -279,12 +285,12 @@ const PastorArea: React.FC<PastorAreaProps> = ({
               const safePrev = Array.isArray(prev) ? prev : [];
               const map = new Map<string, Member>();
               remoteList.forEach(m => { 
-                if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+                if (m && m.id && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name) && !isGuestOrAnonymousUser(m.id, m.email, m.phone, m.name)) {
                   map.set(m.id, m); 
                 }
               });
               safePrev.forEach(m => { 
-                if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name)) {
+                if (m && m.id && !map.has(m.id) && !isUserOrMemberDeleted(m.id, m.email, m.phone, m.name) && !isGuestOrAnonymousUser(m.id, m.email, m.phone, m.name)) {
                   map.set(m.id, m); 
                 }
               });
