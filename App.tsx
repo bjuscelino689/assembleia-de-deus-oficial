@@ -653,25 +653,28 @@ export const App: React.FC = () => {
   };
 
   const handleLogoutUser = () => {
-    const defaultUser: UserProfile = {
-      id: 'visitante_' + Date.now(),
-      name: 'Visitante',
+    // Ao deslogar ou sair da conta, abre diretamente a tela de Identificação / Login
+    localStorage.removeItem('ad_user');
+    const guestUser: UserProfile = {
+      id: 'usr_guest_' + Date.now(),
+      name: 'Aguardando Login',
       email: '',
       phone: '',
       role: 'MEMBRO',
       isAdmin: false,
       isBlocked: false,
-      accessStatus: 'LIBERADO',
+      accessStatus: 'PENDENTE_LIBERACAO',
       corenStatus: 'ATIVO',
       state: 'SP',
       city: 'São Paulo',
       specialty: 'Membro',
       hospital: churchInfo.name,
-      isOnline: true,
+      isOnline: false,
       createdAt: new Date().toISOString()
     };
-    setUser(defaultUser);
-    safeLocalStorageSet('ad_user', defaultUser);
+    setUser(guestUser);
+    safeLocalStorageSet('ad_user', guestUser);
+    setShowAuthModal(true);
   };
 
   // ADICIONAR VÍDEO (Salva no dispositivo e na Nuvem Firestore)
@@ -1071,9 +1074,9 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogoutUser}
-                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-black py-3.5 rounded-2xl text-xs uppercase flex items-center justify-center gap-2 transition-all"
+                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-black py-3.5 rounded-2xl text-xs uppercase flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <LogOut size={16} /> Sair da Conta
+                <LogOut size={16} /> Trocar de Conta / Fazer Login
               </button>
             </div>
           </div>
@@ -1141,9 +1144,9 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogoutUser}
-                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-black py-3.5 rounded-2xl text-xs uppercase flex items-center justify-center gap-2 transition-all"
+                className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-black py-3.5 rounded-2xl text-xs uppercase flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
-                <LogOut size={16} /> Sair da Conta
+                <LogOut size={16} /> Trocar de Conta / Fazer Login
               </button>
             </div>
           </div>
@@ -1337,7 +1340,12 @@ export const App: React.FC = () => {
       {showAuthModal && (
         <MemberAuthModal
           isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
+          allowClose={Boolean(user.isAdmin || (user.accessStatus === 'LIBERADO' && !user.isBlocked))}
+          onClose={() => {
+            if (user.isAdmin || (user.accessStatus === 'LIBERADO' && !user.isBlocked)) {
+              setShowAuthModal(false);
+            }
+          }}
           members={members}
           onRegisterMember={handleRegisterMember}
           onLoginMember={handleLoginMember}

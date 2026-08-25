@@ -10,6 +10,7 @@ interface MemberAuthModalProps {
   onLoginMember: (memberId: string) => void;
   churchName?: string;
   pastorName?: string;
+  allowClose?: boolean;
 }
 
 export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
@@ -19,7 +20,8 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
   onRegisterMember,
   onLoginMember,
   churchName = 'Assembleia de Deus Nacional',
-  pastorName = 'Pr. Juscelino'
+  pastorName = 'Pr. Juscelino',
+  allowClose = false
 }) => {
   const [mode, setMode] = useState<'register' | 'login'>('register');
   const [showPassword, setShowPassword] = useState(false);
@@ -478,13 +480,19 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
 
         {/* Rodapé do Modal */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2 py-1"
-          >
-            Fechar
-          </button>
+          {allowClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2 py-1"
+            >
+              Fechar
+            </button>
+          ) : (
+            <span className="text-[10px] font-bold text-slate-400">
+              Identificação Necessária
+            </span>
+          )}
           <span className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
             <Sparkles size={11} /> Igreja Conectada
           </span>
