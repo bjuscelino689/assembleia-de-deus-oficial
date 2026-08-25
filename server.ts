@@ -2606,13 +2606,30 @@ async function startServer() {
       if (accessCode) {
         serverPastorDelegation.pastorAccessCode = String(accessCode).trim();
       }
+      serverChurchInfo.pastorName = member.name;
+      serverChurchInfo.pastorAdminId = member.id;
+      serverChurchInfo.pastorAdminEmail = member.email || '';
     } else {
-      if (member.role === 'PASTOR') member.role = 'Membro';
-      if (serverPastorDelegation.pastorAdminId === member.id) {
-        serverPastorDelegation.pastorAdminId = '';
-        serverPastorDelegation.pastorAdminEmail = '';
-        serverPastorDelegation.pastorAdminName = 'Pr. Juscelino';
-      }
+      member.role = 'Membro';
+      member.isPastorAdmin = false;
+      serverPastorDelegation.pastorAdminId = '';
+      serverPastorDelegation.pastorAdminEmail = '';
+      serverPastorDelegation.pastorAdminName = 'Pr. Juscelino';
+      serverChurchInfo.pastorName = 'Pr. Juscelino';
+      serverChurchInfo.pastorAdminId = '';
+      serverChurchInfo.pastorAdminEmail = '';
+    }
+
+    // Se estiver revogando, assegura que nenhum outro membro comum continue marcado como pastor delegado
+    if (!shouldPromote) {
+      serverMembers.forEach(m => {
+        if (m && m.id !== 'm_pastor_master' && m.id !== 'usr_admin_master' && m.email !== PRIMARY_ADMIN_EMAIL) {
+          if (m.id === member.id || m.phone === member.phone || m.name === member.name) {
+            m.isPastorAdmin = false;
+            if (m.role === 'PASTOR') m.role = 'Membro';
+          }
+        }
+      });
     }
 
     // Atualiza também em serverRegisteredUsers
@@ -2631,6 +2648,13 @@ async function startServer() {
         correspondingUser.role = 'PASTOR';
         correspondingUser.accessStatus = 'LIBERADO';
         correspondingUser.isBlocked = false;
+      } else {
+        correspondingUser.role = 'Membro';
+        correspondingUser.specialty = 'Membro';
+        correspondingUser.isPastorAdmin = false;
+        if (correspondingUser.email !== PRIMARY_ADMIN_EMAIL && correspondingUser.id !== 'usr_admin_master') {
+          correspondingUser.isAdmin = false;
+        }
       }
     } else if (shouldPromote) {
       correspondingUser = {
@@ -2657,14 +2681,16 @@ async function startServer() {
     saveServerMembers();
     saveServerUsers();
     savePastorDelegation();
+    saveChurchInfo();
 
     saveDocumentToFirestore("members", member.id, member).catch(() => {});
     if (correspondingUser) {
       saveDocumentToFirestore("users", correspondingUser.id, correspondingUser).catch(() => {});
     }
     saveDocumentToFirestore("system_settings", "pastor_delegation", serverPastorDelegation).catch(() => {});
+    saveDocumentToFirestore("system_settings", "church_info", serverChurchInfo).catch(() => {});
 
-    console.log(`[Pastor Designado] "${member.name}" agora é Pastor Administrativo! Código: ${serverPastorDelegation.pastorAccessCode}`);
+    console.log(shouldPromote ? `[Pastor Designado] "${member.name}" agora é Pastor Administrativo!` : `[Pastor Designado] Função pastoral de "${member.name}" revogada!`);
 
     return res.json({
       success: true,
