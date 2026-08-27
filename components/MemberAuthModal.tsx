@@ -132,12 +132,9 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
 
       // Se a senha bater ou se o usuário estiver confirmando seus dados
       if (!existingPass || existingPass === enteredPass || enteredPass === '123456' || enteredPass === '1234') {
-        setSuccessMessage(`🎉 Conta encontrada! Entrando como ${existing.name}...`);
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginMember(existing.id, existing);
-          onClose();
-        }, 700);
+        setIsSubmitting(false);
+        onLoginMember(existing.id, existing);
+        onClose();
         return;
       }
 
@@ -151,20 +148,16 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
           email: cleanEmail || existing.email
         };
         await onRegisterMember(updatedExisting);
-        setSuccessMessage(`✅ Cadastro atualizado com sucesso! Entrando...`);
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginMember(updatedExisting.id, updatedExisting);
-          onClose();
-        }, 700);
+        setIsSubmitting(false);
+        onLoginMember(updatedExisting.id, updatedExisting);
+        onClose();
         return;
       } catch (err) {
-        // Alternativa amigável: joga para o login com a senha e telefone preenchidos
         setIsSubmitting(false);
         setLoginPhone(phone);
         setLoginPassword(password);
         setMode('login');
-        setErrorMessage('Sua conta já existe. Clique em "Entrar na Conta" abaixo para acessar.');
+        setErrorMessage('Sua conta já existe. Digite sua senha para entrar.');
         return;
       }
     }
@@ -186,13 +179,9 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
       };
 
       await onRegisterMember(newMember);
-      setSuccessMessage(`🎉 Conta criada com sucesso! Entrando no aplicativo...`);
-
-      setTimeout(() => {
-        setIsSubmitting(false);
-        onLoginMember(newMember.id, newMember);
-        onClose();
-      }, 800);
+      setIsSubmitting(false);
+      onLoginMember(newMember.id, newMember);
+      onClose();
 
     } catch (err: any) {
       console.error("Erro ao registrar membro:", err);
@@ -299,16 +288,9 @@ export const MemberAuthModal: React.FC<MemberAuthModalProps> = ({
       return;
     }
 
-    if (found.accessStatus === 'LIBERADO') {
-      setSuccessMessage(`✅ Paz do Senhor, ${found.name}! Seu acesso está LIBERADO. Entrando...`);
-    } else {
-      setSuccessMessage(`Paz do Senhor, ${found.name}! Entrando...`);
-    }
-
-    setTimeout(() => {
-      onLoginMember(found.id, found);
-      onClose();
-    }, 600);
+    // Entra direto na conta (se LIBERADO entra na Home, se PENDENTE mostra a tela de aguardando liberação)
+    onLoginMember(found.id, found);
+    onClose();
   };
 
   return (
