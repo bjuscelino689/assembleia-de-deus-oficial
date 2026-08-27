@@ -279,26 +279,3 @@ const QuickLink: React.FC<{ onClick: () => void; icon: React.ReactNode; title: s
 );
 
 export default HomeView;
-
-
-const MenuBtn: React.FC<{ onClick: () => void; icon: React.ReactElement; label: string; color: string }> = ({ onClick, icon, label, color }) => (
-  <button onClick={onClick} className="bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-zinc-800 shadow-sm flex flex-col items-center gap-4 active:scale-95 transition-all cursor-pointer">
-    <div className={`p-4 ${color} text-white rounded-2xl shadow-lg`}>
-      {React.cloneElement(icon, { size: 30 })}
-    </div>
-    <span className="font-black text-slate-800 dark:text-zinc-100 uppercase tracking-tight text-center">{label}</span>
-  </button>
-);
-
-const QuickLink: React.FC<{ onClick: () => void; icon: React.ReactNode; title: string; desc: string; color: string }> = ({ onClick, icon, title, desc, color }) => (
-  <button onClick={onClick} className={`w-full bg-white dark:bg-zinc-900 p-5 rounded-[2rem] border border-slate-100 dark:border-zinc-800 flex items-center gap-4 active:scale-[0.98] transition-all border-l-[8px] ${color} cursor-pointer`}>
-    <div className="p-3 bg-slate-50 dark:bg-zinc-800 rounded-xl">{icon}</div>
-    <div className="flex-1 text-left">
-      <h4 className="font-black text-slate-900 dark:text-zinc-100 text-sm">{title}</h4>
-      <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium line-clamp-1">{desc}</p>
-    </div>
-    <ChevronRight size={18} className="text-slate-400" />
-  </button>
-);
-
-export default HomeView;

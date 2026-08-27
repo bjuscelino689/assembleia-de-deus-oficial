@@ -795,24 +795,40 @@ const PastorArea: React.FC<PastorAreaProps> = ({
       const updatedMember: Member = { 
         ...member, 
         isBlocked: false, 
-        blockedReason: undefined, 
+        blockedReason: '', 
         accessStatus: 'LIBERADO' 
       };
       setMembers(prev => {
-        const list = prev.map(m => m.id === member.id ? updatedMember : m);
+        const list = prev.map(m => (m.id === member.id || (m.phone && member.phone && m.phone === member.phone) || (m.email && member.email && m.email === member.email)) ? { ...m, ...updatedMember } : m);
         localStorage.setItem('ad_members', JSON.stringify(list));
         return list;
       });
 
-      // Salva no Firestore
+      // Salva no Firestore em members e users
       syncDocToFirestore('members', member.id, updatedMember).catch(() => {});
+      syncDocToFirestore('users', member.id, {
+        id: member.id,
+        name: member.name,
+        email: member.email || '',
+        phone: member.phone || '',
+        accessStatus: 'LIBERADO',
+        isBlocked: false
+      }).catch(() => {});
 
       try {
-        await fetch(`/api/members/${member.id}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO', blockedReason: '' })
-        });
+        await Promise.allSettled([
+          fetch(`/api/members/${encodeURIComponent(member.id)}/approve`, { method: 'POST' }),
+          fetch(`/api/members/${encodeURIComponent(member.id)}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO', blockedReason: '' })
+          }),
+          fetch(`/api/users/${encodeURIComponent(member.id)}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO' })
+          })
+        ]);
       } catch (e) {
         console.error("Erro ao atualizar status do membro:", e);
       }
@@ -839,20 +855,40 @@ const PastorArea: React.FC<PastorAreaProps> = ({
     };
 
     setMembers(prev => {
-      const list = prev.map(m => m.id === blockingMember.id ? updatedMember : m);
+      const list = prev.map(m => (m.id === blockingMember.id || (m.phone && blockingMember.phone && m.phone === blockingMember.phone) || (m.email && blockingMember.email && m.email === blockingMember.email)) ? { ...m, ...updatedMember } : m);
       localStorage.setItem('ad_members', JSON.stringify(list));
       return list;
     });
 
-    // Salva no Firestore
+    // Salva no Firestore em members e users
     syncDocToFirestore('members', blockingMember.id, updatedMember).catch(() => {});
+    syncDocToFirestore('users', blockingMember.id, {
+      id: blockingMember.id,
+      name: blockingMember.name,
+      email: blockingMember.email || '',
+      phone: blockingMember.phone || '',
+      accessStatus: 'BLOQUEADO',
+      isBlocked: true
+    }).catch(() => {});
 
     try {
-      await fetch(`/api/members/${blockingMember.id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBlocked: true, accessStatus: 'BLOQUEADO', blockedReason: reason })
-      });
+      await Promise.allSettled([
+        fetch(`/api/members/${encodeURIComponent(blockingMember.id)}/block`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        }),
+        fetch(`/api/members/${encodeURIComponent(blockingMember.id)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isBlocked: true, accessStatus: 'BLOQUEADO', blockedReason: reason })
+        }),
+        fetch(`/api/users/${encodeURIComponent(blockingMember.id)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isBlocked: true, accessStatus: 'BLOQUEADO' })
+        })
+      ]);
     } catch (e) {
       console.error("Erro ao bloquear membro no servidor:", e);
     }
@@ -875,19 +911,37 @@ const PastorArea: React.FC<PastorAreaProps> = ({
     };
 
     setMembers(prev => {
-      const list = prev.map(m => m.id === member.id ? updatedMember : m);
+      const list = prev.map(m => (m.id === member.id || (m.phone && member.phone && m.phone === member.phone) || (m.email && member.email && m.email === member.email)) ? { ...m, ...updatedMember } : m);
       localStorage.setItem('ad_members', JSON.stringify(list));
       return list;
     });
 
+    // Salva no Firestore em members e users simultaneamente
     syncDocToFirestore('members', member.id, updatedMember).catch(() => {});
+    syncDocToFirestore('users', member.id, {
+      id: member.id,
+      name: member.name,
+      email: member.email || '',
+      phone: member.phone || '',
+      accessStatus: 'LIBERADO',
+      isBlocked: false,
+      specialty: member.role || 'Membro'
+    }).catch(() => {});
 
     try {
-      await fetch(`/api/members/${member.id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO', blockedReason: '' })
-      });
+      await Promise.allSettled([
+        fetch(`/api/members/${encodeURIComponent(member.id)}/approve`, { method: 'POST' }),
+        fetch(`/api/members/${encodeURIComponent(member.id)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO', blockedReason: '' })
+        }),
+        fetch(`/api/users/${encodeURIComponent(member.id)}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isBlocked: false, accessStatus: 'LIBERADO' })
+        })
+      ]);
     } catch (e) {
       console.error("Erro ao aprovar membro no servidor:", e);
     }

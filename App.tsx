@@ -33,6 +33,7 @@ import ScheduleView from './views/ScheduleView';
 import PastorArea from './views/PastorArea';
 import { HymnsView } from './views/HymnsView';
 import { BibleSearchView } from './views/BibleSearchView';
+import { PastoralWordView } from './views/PastoralWordView';
 
 // COMPONENTES & MODAIS
 import { HeaderNav } from './components/HeaderNav';
@@ -92,7 +93,7 @@ export const App: React.FC = () => {
     return localStorage.getItem('ad_dark_mode') === 'true';
   });
 
-  // USUÁRIO DO APP
+  // USUÁRIO DO APP - BLINDAGEM DE SEGURANÇA NA SESSÃO
   const [user, setUser] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('ad_user');
     if (saved) {
@@ -101,16 +102,8 @@ export const App: React.FC = () => {
         if (parsed && parsed.id) {
           const pEmail = (parsed.email || '').toLowerCase().trim();
           const pId = String(parsed.id).toLowerCase().trim();
-          const pName = (parsed.name || '').toLowerCase().trim();
-          if (
-            pEmail.includes('bjuscelino33') || 
-            pEmail === 'meuplantaopro@gmail.com' ||
-            pId === 'pastor_master_1' ||
-            pId === 'usr_pastor_master' ||
-            pId === 'm_pastor_master' ||
-            pId === 'usr_admin_master' ||
-            pName.includes('juscelino')
-          ) {
+          const isMaster = isMasterAdminEmail(pEmail) || pId === 'usr_admin_master' || pId === 'm_pastor_master';
+          if (isMaster) {
             return {
               id: 'm_pastor_master',
               name: 'Pr. Juscelino (Pastor Presidente)',
@@ -120,16 +113,23 @@ export const App: React.FC = () => {
               accessStatus: 'LIBERADO'
             };
           }
-          return parsed;
+          return {
+            ...parsed,
+            isAdmin: false,
+            role: parsed.isPastorAdmin ? 'PASTOR' : (parsed.role || 'MEMBRO')
+          };
         }
       } catch (e) {}
     }
+    // Perfil Padrão Inicial Seguro (Membro Visitante - Não assume conta de administrador)
     return {
-      id: 'm_pastor_master',
-      name: 'Pr. Juscelino (Pastor Presidente)',
-      email: PRIMARY_ADMIN_EMAIL,
-      role: 'ADMIN_MASTER',
-      isAdmin: true,
+      id: 'usr_guest_' + Date.now(),
+      name: 'Membro / Visitante',
+      email: '',
+      phone: '',
+      role: 'MEMBRO',
+      isAdmin: false,
+      isBlocked: false,
       accessStatus: 'LIBERADO'
     };
   });
@@ -150,9 +150,8 @@ export const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         if (parsed && parsed.email && isMasterAdminEmail(parsed.email)) return true;
       } catch (e) {}
-      return false;
     }
-    return true; // Padrão inicial com PRIMARY_ADMIN_EMAIL
+    return false;
   });
 
   // DADOS DA IGREJA (Limpos de agendamentos antigos)
@@ -590,54 +589,59 @@ export const App: React.FC = () => {
     safeLocalStorageSet('ad_user', loggedUser);
   };
 
-  const handleLoginMember = (memberId: string) => {
-    const rawClean = memberId.trim();
+  const handleLoginMember = (memberId: string, directMember?: Member) => {
+    const rawClean = (memberId || '').trim();
     const rawDigits = rawClean.replace(/\D/g, '');
 
-    // Busca no state atual
-    let found = members.find(m => {
+    const matchesTarget = (m: any): boolean => {
       if (!m) return false;
-      if (m.id === rawClean) return true;
-      const mDigits = m.phone ? m.phone.replace(/\D/g, '') : '';
-      if (rawDigits.length >= 8 && mDigits && (mDigits === rawDigits || mDigits.endsWith(rawDigits) || rawDigits.endsWith(mDigits))) return true;
+      if (m.id && m.id === rawClean) return true;
+      const mDigits = m.phone ? String(m.phone).replace(/\D/g, '') : '';
+      if (rawDigits.length >= 7 && mDigits) {
+        if (mDigits === rawDigits) return true;
+        if (mDigits.endsWith(rawDigits) || rawDigits.endsWith(mDigits)) return true;
+        if (rawDigits.slice(-8) === mDigits.slice(-8)) return true;
+      }
       if (m.email && m.email.trim().toLowerCase() === rawClean.toLowerCase()) return true;
       if (m.name && m.name.trim().toLowerCase() === rawClean.toLowerCase()) return true;
       return false;
-    });
+    };
 
-    // Fallback: busca no localStorage se o state ainda não tiver atualizado
+    // 1. Usa objeto direto se fornecido
+    let found: Member | undefined = directMember;
+
+    // 2. Busca no state atual
+    if (!found) {
+      found = members.find(matchesTarget);
+    }
+
+    // 3. Fallback: busca no localStorage
     if (!found) {
       try {
         const saved = localStorage.getItem('ad_members');
         if (saved) {
           const list: Member[] = JSON.parse(saved);
           if (Array.isArray(list)) {
-            found = list.find(m => {
-              if (!m) return false;
-              if (m.id === rawClean) return true;
-              const mDigits = m.phone ? m.phone.replace(/\D/g, '') : '';
-              if (rawDigits.length >= 8 && mDigits && (mDigits === rawDigits || mDigits.endsWith(rawDigits) || rawDigits.endsWith(mDigits))) return true;
-              if (m.email && m.email.trim().toLowerCase() === rawClean.toLowerCase()) return true;
-              if (m.name && m.name.trim().toLowerCase() === rawClean.toLowerCase()) return true;
-              return false;
-            });
+            found = list.find(matchesTarget);
           }
         }
       } catch (e) {}
     }
 
     if (found) {
-      const isBlocked = Boolean(found.isBlocked || found.accessStatus === 'BLOQUEADO');
-      const isMaster = Boolean(found.role === 'PASTOR' || found.role === 'ADMIN' || found.email === 'bjuscelino33@gmail.com');
-      const finalStatus = isMaster ? 'LIBERADO' : (found.accessStatus || (isBlocked ? 'BLOQUEADO' : 'PENDENTE_LIBERACAO'));
+      const isMaster = Boolean(found.email && isMasterAdminEmail(found.email));
+      const isPastor = !isMaster && (found.role === 'PASTOR' || found.isPastorAdmin === true);
+      const isBlocked = !isMaster && Boolean(found.isBlocked || found.accessStatus === 'BLOQUEADO');
+      const finalStatus = isMaster ? 'LIBERADO' : (isBlocked ? 'BLOQUEADO' : (found.accessStatus || 'PENDENTE_LIBERACAO'));
 
       const loggedUser: UserProfile = {
         id: found.id,
         name: found.name,
         email: found.email || '',
         phone: found.phone || '',
-        role: isMaster ? 'ADMIN_MASTER' : 'MEMBRO',
+        role: isMaster ? 'ADMIN_MASTER' : (isPastor ? 'PASTOR' : 'MEMBRO'),
         isAdmin: isMaster,
+        isPastorAdmin: isPastor,
         isBlocked: isBlocked,
         accessStatus: finalStatus,
         corenStatus: 'ATIVO',
@@ -650,6 +654,7 @@ export const App: React.FC = () => {
       };
       setUser(loggedUser);
       safeLocalStorageSet('ad_user', loggedUser);
+      setIsPastorAuth(isMaster);
     }
   };
 
@@ -1222,6 +1227,22 @@ export const App: React.FC = () => {
           />
         )}
 
+        {currentView === 'pastoral_word' && (
+          <PastoralWordView
+            churchInfo={churchInfo}
+            user={user}
+            verses={verses}
+            onNavigate={(target) => {
+              if (['cults', 'meetings', 'festivals', 'campaigns'].includes(target)) {
+                navigateToSchedule(target);
+              } else {
+                setCurrentView(target);
+              }
+            }}
+            onBack={() => setCurrentView('home')}
+          />
+        )}
+
         {currentView === 'schedule' && (
           <ScheduleView
             view={scheduleSubView}
@@ -1321,8 +1342,6 @@ export const App: React.FC = () => {
                 return m;
               }));
             }}
-            members={members}
-            setMembers={setMembers}
           />
         )}
       </main>

@@ -3,6 +3,7 @@ import {
   getFirestore, 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   setDoc, 
   deleteDoc, 
@@ -60,6 +61,23 @@ export async function fetchCollectionFromFirestore<T = any>(collectionName: stri
   } catch (error) {
     console.warn(`[Firebase Fetch] Coleção ${collectionName}:`, error);
     return [];
+  }
+}
+
+/**
+ * Carrega um único documento do Firestore
+ */
+export async function fetchDocumentFromFirestore<T = any>(collectionName: string, docId: string): Promise<T | null> {
+  try {
+    if (!docId) return null;
+    const snap = await getDoc(doc(db, collectionName, String(docId)));
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() } as T;
+    }
+    return null;
+  } catch (error) {
+    console.warn(`[Firebase Fetch Doc] Documento ${collectionName}/${docId}:`, error);
+    return null;
   }
 }
 

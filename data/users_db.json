@@ -44,6 +44,30 @@
       "deviceType": "CELULAR"
     },
     {
+      "id": "m_1787660501185",
+      "name": "Irmã Francisca",
+      "isAdmin": false,
+      "isPastorAdmin": false,
+      "accessStatus": "LIBERADO",
+      "phone": "(98) 99114-3296",
+      "email": "98991143296@membro.ad.org",
+      "role": "Membro",
+      "specialty": "Membro",
+      "isBlocked": false
+    },
+    {
+      "id": "m_1787785909369",
+      "isBlocked": false,
+      "specialty": "PASTOR",
+      "name": "Irmão Paulo",
+      "email": "9885162432@membro.ad.org",
+      "phone": "(98) 85162-432",
+      "role": "PASTOR",
+      "isPastorAdmin": true,
+      "accessStatus": "LIBERADO",
+      "isAdmin": false
+    },
+    {
       "id": "usr_nurse_1785535657701",
       "accessStatus": "LIBERADO",
       "specialty": "Enfermagem Geral",
