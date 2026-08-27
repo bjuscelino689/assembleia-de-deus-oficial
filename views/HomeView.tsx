@@ -65,7 +65,7 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 block">
-                {isMasterAdmin ? '👑 Pastor Presidente' : isDesignatedPastor ? '👑 Pastora Designada' : 'Membro Conectado • Paz do Senhor!'}
+                {isMasterAdmin ? '👑 Pastor Presidente' : isDesignatedPastor ? '👑 Pastor(a) Designado(a)' : 'Membro Conectado • Paz do Senhor!'}
               </span>
               <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
                 {user.name}
@@ -103,7 +103,7 @@ const HomeView: React.FC<HomeViewProps> = ({ churchInfo, onNavigate, user, onOpe
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest bg-slate-950 text-amber-300 px-2.5 py-0.5 rounded-full">
-                  Área da Pastora Designada
+                  Área Pastoral Designada
                 </span>
               </div>
               <h3 className="font-black text-base text-white mt-0.5">Acessar Agenda & Gestão de Cultos</h3>

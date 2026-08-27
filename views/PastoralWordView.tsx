@@ -323,23 +323,13 @@ export const PastoralWordView: React.FC<PastoralWordViewProps> = ({
           </div>
         )}
 
-        {/* ASSINATURA PASTORAL */}
-        <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-black">
-              <ShieldCheck size={20} />
-            </div>
-            <div>
-              <h5 className="font-black text-slate-900 dark:text-white text-sm">{message.author}</h5>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">{message.authorRole} • {churchInfo.name}</p>
-            </div>
-          </div>
-
+        {/* AÇÃO DE ORAÇÃO */}
+        <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-end">
           <button
             onClick={() => onNavigate('prayer')}
-            className="px-4 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 transition-all"
+            className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all cursor-pointer"
           >
-            <Heart size={14} />
+            <Heart size={15} className="fill-rose-500 text-rose-500" />
             <span>Fazer Pedido de Oração</span>
           </button>
         </div>

@@ -784,7 +784,11 @@ export const App: React.FC = () => {
     setCurrentView('schedule');
   };
 
-  const userRole: UserRole = isPastorAuth ? 'pastor' : 'member';
+  // Identificação Pastoral Completa
+  const isMasterUser = Boolean(
+    (user && user.email && isMasterAdminEmail(user.email)) || 
+    (user && (user.id === 'usr_admin_master' || user.id === 'm_pastor_master' || user.role === 'ADMIN_MASTER'))
+  );
 
   // VERIFICAÇÃO EM TEMPO REAL DE BLOQUEIO E LIBERAÇÃO DE MEMBRO
   const currentMemberRecord = members.find(m => 
@@ -793,6 +797,23 @@ export const App: React.FC = () => {
     (m.email && user.email && m.email.toLowerCase() === user.email.toLowerCase())
   );
 
+  const isPastoralUser = Boolean(
+    isMasterUser ||
+    isPastorAuth ||
+    user.isAdmin ||
+    user.isPastorAdmin === true ||
+    user.role === 'PASTOR' ||
+    user.role === 'ADMIN_MASTER' ||
+    (churchInfo?.pastorAdminId && (
+      user.id === churchInfo.pastorAdminId || 
+      (user.phone && user.phone === churchInfo.pastorAdminId) ||
+      (user.email && churchInfo.pastorAdminEmail && user.email.toLowerCase() === churchInfo.pastorAdminEmail.toLowerCase())
+    )) ||
+    (currentMemberRecord && (currentMemberRecord.isPastorAdmin === true || currentMemberRecord.role === 'PASTOR'))
+  );
+
+  const userRole: UserRole = isPastoralUser ? UserRole.PASTOR : UserRole.MEMBRO;
+
   const isCurrentUserBlocked = !user.isAdmin && Boolean(
     user.isBlocked || 
     user.accessStatus === 'BLOQUEADO' || 
@@ -800,7 +821,7 @@ export const App: React.FC = () => {
     currentMemberRecord?.accessStatus === 'BLOQUEADO'
   );
 
-  const isCurrentUserPending = !user.isAdmin && !isCurrentUserBlocked && Boolean(
+  const isCurrentUserPending = !user.isAdmin && !isCurrentUserBlocked && !isPastoralUser && Boolean(
     user.accessStatus === 'PENDENTE_LIBERACAO' ||
     currentMemberRecord?.accessStatus === 'PENDENTE_LIBERACAO'
   );
@@ -808,17 +829,23 @@ export const App: React.FC = () => {
   const [isCheckingApproval, setIsCheckingApproval] = useState(false);
   const [approvalToast, setApprovalToast] = useState<string | null>(null);
 
-  // Sincroniza em tempo real se o pastor liberou o membro
+  // Sincroniza em tempo real se o pastor liberou o membro ou o promoveu a pastor
   useEffect(() => {
     if (currentMemberRecord && user.id === currentMemberRecord.id) {
+      const isRecordPastor = Boolean(currentMemberRecord.isPastorAdmin || currentMemberRecord.role === 'PASTOR');
       if (
         user.accessStatus !== currentMemberRecord.accessStatus || 
-        user.isBlocked !== Boolean(currentMemberRecord.isBlocked)
+        user.isBlocked !== Boolean(currentMemberRecord.isBlocked) ||
+        user.isPastorAdmin !== isRecordPastor ||
+        (isRecordPastor && user.role !== 'PASTOR')
       ) {
         setUser(prev => {
           const updated: UserProfile = {
             ...prev,
-            accessStatus: currentMemberRecord.accessStatus || (currentMemberRecord.isBlocked ? 'BLOQUEADO' : (prev.isAdmin ? 'LIBERADO' : 'PENDENTE_LIBERACAO')),
+            role: prev.isAdmin ? 'ADMIN_MASTER' : (isRecordPastor ? 'PASTOR' : (prev.role || 'MEMBRO')),
+            isPastorAdmin: isRecordPastor,
+            specialty: isRecordPastor ? 'PASTOR' : (currentMemberRecord.role || prev.specialty || 'Membro'),
+            accessStatus: currentMemberRecord.accessStatus || (currentMemberRecord.isBlocked ? 'BLOQUEADO' : (prev.isAdmin || isRecordPastor ? 'LIBERADO' : 'PENDENTE_LIBERACAO')),
             isBlocked: Boolean(currentMemberRecord.isBlocked)
           };
           safeLocalStorageSet('ad_user', updated);
@@ -826,7 +853,7 @@ export const App: React.FC = () => {
         });
       }
     }
-  }, [currentMemberRecord, user.id, user.accessStatus, user.isBlocked, user.isAdmin]);
+  }, [currentMemberRecord, user.id, user.accessStatus, user.isBlocked, user.isAdmin, user.isPastorAdmin, user.role]);
 
   // Se a conta do usuário logado foi excluída permanentemente pelo pastor/admin em qualquer dispositivo, encerra a sessão imediatamente
   useEffect(() => {

@@ -49,7 +49,13 @@ const ScheduleView: React.FC<ScheduleProps> = ({
   const [memberName, setMemberName] = useState('');
   const [address, setAddress] = useState('');
 
-  const isAdmin = role === UserRole.PASTOR;
+  const isAdmin = 
+    role === UserRole.PASTOR || 
+    role === UserRole.ADMIN || 
+    (role as string) === 'pastor' || 
+    (role as string) === 'admin' || 
+    (role as string) === 'PASTOR' || 
+    (role as string) === 'ADMIN_MASTER';
   
   const colors: Record<string, string> = { 
     cults: 'bg-app-green', 

@@ -98,25 +98,10 @@ const PastorArea: React.FC<PastorAreaProps> = ({
     })()
   );
 
-  const isDesignatedPastor = Boolean(
-    user && 
-    !isMasterAdminStrict &&
-    (
-      user.isPastorAdmin === true ||
-      (user.role === 'PASTOR' && user.id !== 'm_pastor_master' && user.id !== 'usr_admin_master') ||
-      (pastorDelegation.pastorAdminId && (user.id === pastorDelegation.pastorAdminId || (user.email && pastorDelegation.pastorAdminEmail && user.email.toLowerCase() === pastorDelegation.pastorAdminEmail.toLowerCase()))) ||
-      (churchInfo?.pastorAdminId && (user.id === churchInfo.pastorAdminId || (user.email && churchInfo.pastorAdminEmail && user.email.toLowerCase() === churchInfo.pastorAdminEmail.toLowerCase())))
-    )
-  );
-
   const isMasterAdmin = isMasterAdminStrict;
-  const hasPastoralAccess = isMasterAdminStrict || isDesignatedPastor || isAuthenticated;
 
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [activeTab, setActiveTab] = useState<'membros' | 'delegacao' | 'agendamentos' | 'config'>(
-    isDesignatedPastor ? 'agendamentos' : 'membros'
-  );
   
   // Estado para Delegação Pastoral Exclusiva
   const [pastorDelegation, setPastorDelegation] = useState<{
@@ -130,6 +115,23 @@ const PastorArea: React.FC<PastorAreaProps> = ({
     pastorAdminName: churchInfo?.pastorName || 'Pr. Juscelino',
     pastorAccessCode: churchInfo?.pastorAccessCode || '1234'
   });
+
+  const isDesignatedPastor = Boolean(
+    user && 
+    !isMasterAdminStrict &&
+    (
+      user.isPastorAdmin === true ||
+      (user.role === 'PASTOR' && user.id !== 'm_pastor_master' && user.id !== 'usr_admin_master') ||
+      (pastorDelegation.pastorAdminId && (user.id === pastorDelegation.pastorAdminId || (user.email && pastorDelegation.pastorAdminEmail && user.email.toLowerCase() === pastorDelegation.pastorAdminEmail.toLowerCase()))) ||
+      (churchInfo?.pastorAdminId && (user.id === churchInfo.pastorAdminId || (user.email && churchInfo.pastorAdminEmail && user.email.toLowerCase() === churchInfo.pastorAdminEmail.toLowerCase())))
+    )
+  );
+
+  const hasPastoralAccess = isMasterAdminStrict || isDesignatedPastor || isAuthenticated;
+
+  const [activeTab, setActiveTab] = useState<'membros' | 'delegacao' | 'agendamentos' | 'config'>(
+    isDesignatedPastor ? 'agendamentos' : 'membros'
+  );
   const [delegationSearch, setDelegationSearch] = useState('');
   const [isSavingDelegation, setIsSavingDelegation] = useState(false);
 
@@ -386,6 +388,20 @@ const PastorArea: React.FC<PastorAreaProps> = ({
         return m;
       });
       setMembers(updatedMembers);
+      try {
+        localStorage.setItem('ad_members', JSON.stringify(updatedMembers));
+        localStorage.setItem('ad_church_info', JSON.stringify(updatedChurch));
+        localStorage.setItem('ad_pastor_delegation', JSON.stringify(updatedDelegation));
+      } catch (e) {}
+
+      if (onEditMember) {
+        onEditMember(targetMember.id, {
+          isPastorAdmin: true,
+          role: 'PASTOR',
+          accessStatus: 'LIBERADO',
+          isBlocked: false
+        });
+      }
 
       const updatedChurch = {
         ...churchInfo,
@@ -471,6 +487,18 @@ const PastorArea: React.FC<PastorAreaProps> = ({
         return m;
       });
       setMembers(updatedMembers);
+      try {
+        localStorage.setItem('ad_members', JSON.stringify(updatedMembers));
+        localStorage.setItem('ad_church_info', JSON.stringify(updatedChurch));
+        localStorage.setItem('ad_pastor_delegation', JSON.stringify(updatedDelegation));
+      } catch (e) {}
+
+      if (onEditMember) {
+        onEditMember(targetMember.id, {
+          isPastorAdmin: false,
+          role: 'Membro'
+        });
+      }
 
       const updatedChurch = {
         ...churchInfo,
@@ -1712,7 +1740,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                         ) : isMasterAdminStrict ? (
                           <>
                             {/* Botão Nomear / Identificar Pastor Administrativo */}
-                            {member.isPastorAdmin || pastorDelegation.pastorAdminId === member.id ? (
+                            {Boolean(member.isPastorAdmin || member.role === 'PASTOR' || pastorDelegation.pastorAdminId === member.id || (churchInfo?.pastorAdminId && churchInfo.pastorAdminId === member.id)) ? (
                               <div className="flex items-center gap-1.5">
                                 <span className="px-3 py-2 bg-amber-500/20 border border-amber-400/50 text-amber-300 font-black rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
                                   <Crown size={13} className="text-amber-400" />
@@ -1721,7 +1749,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleRevokePastorRole(member)}
-                                  className="px-2.5 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-xl text-[10px] font-black uppercase"
+                                  className="px-2.5 py-2 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 rounded-xl text-[10px] font-black uppercase cursor-pointer"
                                   title="Revogar Função Pastoral"
                                 >
                                   Remover
@@ -1731,7 +1759,7 @@ const PastorArea: React.FC<PastorAreaProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handlePromoteMemberToPastor(member)}
-                                className="px-3 py-2 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-400/40 font-black rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center gap-1"
+                                className="px-3 py-2 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-400/40 font-black rounded-xl text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
                                 title="Designar este membro como o Pastor Administrativo"
                               >
                                 <Crown size={12} />
