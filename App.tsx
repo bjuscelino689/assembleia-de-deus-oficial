@@ -655,6 +655,35 @@ export const App: React.FC = () => {
       setUser(loggedUser);
       safeLocalStorageSet('ad_user', loggedUser);
       setIsPastorAuth(isMaster);
+
+      // Consulta de confirmação rápida no servidor para capturar liberação feita pelo pastor
+      if (!isMaster) {
+        fetch('/api/members')
+          .then(res => res.json())
+          .then((remoteList: any[]) => {
+            if (Array.isArray(remoteList)) {
+              const fresh = remoteList.find(matchesTarget);
+              if (fresh) {
+                const freshStatus = fresh.isBlocked || fresh.accessStatus === 'BLOQUEADO' 
+                  ? 'BLOQUEADO' 
+                  : (fresh.accessStatus || 'PENDENTE_LIBERACAO');
+                setUser(prev => {
+                  if (!prev || prev.id !== fresh.id) return prev;
+                  const updated: UserProfile = {
+                    ...prev,
+                    name: fresh.name || prev.name,
+                    phone: fresh.phone || prev.phone,
+                    accessStatus: freshStatus,
+                    isBlocked: fresh.isBlocked || freshStatus === 'BLOQUEADO'
+                  };
+                  safeLocalStorageSet('ad_user', updated);
+                  return updated;
+                });
+              }
+            }
+          })
+          .catch(() => {});
+      }
     }
   };
 
